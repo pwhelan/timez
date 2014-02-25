@@ -8,13 +8,35 @@ IDLETIMEMS=`xprintidle`
 IDLETIME=`expr $IDLETIMEMS / 1000`
 WINDOWCWD=`readlink /proc/$WINDOWPID/cwd`
 
+
+CHILDREN=""
+
+for CHILDPID in `ps x -o ppid,pid | grep '^[[:space:]]'$WINDOWPID | awk -F ' ' '{print $2}'`; do
+	CHILDEXEC=`readlink /proc/$CHILDPID/exe`
+	CHILDCWD=`readlink /proc/$CHILDPID/cwd`
+	
+	read -r -d '' CHILD <<EOF
+	{
+		"exec": "$CHILDEXEC",
+		"pid": "$CHILDPID",
+		"cwd": "$CHILDCWD"
+	}
+	
+EOF
+	CHILDREN=$CHILDREN" "$CHILD,
+done
+
 cat << EOF | http POST http://127.0.0.1:9137/task/state/ 2>&1 > /dev/null
 {
 	"exec": "$WINDOWBIN",
 	"name": "$WINDOWNAME",
 	"idle": "$IDLETIMEMS",
 	"cwd": "$WINDOWCWD",
-	"pid": "$WINDOWPID"
+	"pid": "$WINDOWPID",
+	"children": [
+		$CHILDREN
+		{}
+	]
 }
 EOF
 
