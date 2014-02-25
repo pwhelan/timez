@@ -1,0 +1,11 @@
+#!/bin/bash
+
+function start_server()
+{
+	(cd `dirname $0`;
+		cd ../server/public
+		php -S 0.0.0.0:9137
+	)
+}
+
+start_server &

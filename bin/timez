@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -L $0 ]; then
+	REALBIN=`readlink $0`
+	BINDIR=`dirname $REALBIN`
+elif [ -f $0 ]; then
+	BINDIR=`dirname $0`
+fi
+
+$BINDIR/timez-$1 $2
