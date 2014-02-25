@@ -12,7 +12,8 @@ cat << EOF | http POST http://127.0.0.1:9137/task/state/ 2>&1 > /dev/null
 	"exec": "$WINDOWBIN",
 	"name": "$WINDOWNAME",
 	"idle": "$IDLETIME",
-	"cwd": "$WINDOWCWD"
+	"cwd": "$WINDOWCWD",
+	"pid": "$WINDOWPID"
 }
 EOF
 
