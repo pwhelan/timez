@@ -26,7 +26,7 @@ $app->post('/task/stop/(:id(/:offset))', function($id = 0, $offset = 0) use ($ap
 		$id = 0;
 	}
 	
-	$task = $timez->findAndModify(
+	$task = $timez->update(
 		$id ? 
 			(ctype_xdigit($id) && $id ?
 				['_id' => new MongoId($id), 'active' => true] :
@@ -36,8 +36,10 @@ $app->post('/task/stop/(:id(/:offset))', function($id = 0, $offset = 0) use ($ap
 				)
 			) :
 			['active' => true],
-		['active' => false, 'stop' => date('c', strtotime('-'.abs($offset).' seconds'))],
-		null,
+		['$set' => [
+			'active' => false, 
+			'stop' => date('c', strtotime('-'.abs($offset).' seconds'))
+		]],
 		['new' => true]
 	);
 	print json_encode($task);
