@@ -1,0 +1,11 @@
+# Ignore backup files
+*~
+DEADJOE
+
+# Ignore composer files
+/server/vendor
+/server/composer.lock
+
+# Ignore server logs
+/server/public/error.log
+/server/public/out.log
