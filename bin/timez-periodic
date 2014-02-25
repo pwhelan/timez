@@ -1,0 +1,15 @@
+#!/bin/bash
+#
+# This script run every 15 seconds
+# https://coderwall.com/p/x0fqmw
+
+function do_periodic() 
+{
+	# @TODO: use $0 to get the actual bin directory...
+	while (sleep 15 && /home/pwhelan/bin/timez state) &
+	do
+		wait $!
+	done
+}
+
+do_periodic &

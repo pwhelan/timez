@@ -1,0 +1,23 @@
+#!/bin/bash
+
+WINDOWID=`xdotool getactivewindow` 
+WINDOWNAME=`xdotool getwindowname $WINDOWID`
+WINDOWPID=`xdotool getwindowpid $WINDOWID`
+WINDOWBIN=`readlink /proc/$WINDOWPID/exe`
+IDLETIME=`xprintidle`
+WINDOWCWD=`readlink /proc/$WINDOWPID/cwd`
+
+cat << EOF | http POST http://127.0.0.1:8000/task/state/ 2>&1 > /dev/null
+{
+	"exec": "$WINDOWBIN",
+	"name": "$WINDOWNAME",
+	"idle": "$IDLETIME",
+	"cwd": "$WINDOWCWD"
+}
+EOF
+
+if [ "$IDLETIME" -gt `expr 5 '*' 60 '*' 60` ]; then
+	timez stop `expr $IDLETIME / 1000` 2>&1 > /dev/null
+fi
+
+#echo "id="$WINDOWID "name="$WINDOWNAME "pid="$WINDOWPID
