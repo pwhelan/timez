@@ -4,7 +4,7 @@ require __DIR__.'/../vendor/autoload.php';
 
 $m = new MongoClient(); // connect
 $db = $m->timez; // get the database named "foo"
-$timez = $db->timez;
+$timez = $db->tasks;
 
 
 $app = new Slim\Slim();
