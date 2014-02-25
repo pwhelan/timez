@@ -1,3 +1,5 @@
 #!/bin/bash
 
-http POST http://127.0.0.1:8000/task/$1
+NAME=`echo $@ | sed s/' '/'%20'/g`
+
+http POST http://127.0.0.1:8000/task/$NAME
