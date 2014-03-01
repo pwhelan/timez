@@ -1,9 +1,12 @@
 Timez: A simple script driven timer app.
 ========================================
 
+[![Stories in Ready](https://badge.waffle.io/pwhelan/timez.png?label=ready&title=Ready)](http://waffle.io/pwhelan/timez)
+
 This is a dirt simple application to track time. It uses a PHP server to log
 time states to a MongoDB server and uses a set of scripts to update the
 state.
+
 
 Installation
 ------------
