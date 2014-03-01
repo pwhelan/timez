@@ -7,4 +7,9 @@ elif [ -f $0 ]; then
 	BINDIR=`dirname $0`
 fi
 
-$BINDIR/timez-$1 $2
+if [ -z $1 ]; then
+	$BINDIR/timez-stat
+else
+	$BINDIR/timez-$1 $2
+fi
+

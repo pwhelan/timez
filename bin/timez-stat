@@ -1,0 +1,21 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__.'/../server/vendor/autoload.php';
+use Guzzle\Http\Client;
+use Carbon\Carbon;
+
+
+$http = new Client("http://127.0.0.1:9137");
+
+$task = $http->get('/task/')->send()->json();
+if (empty($task)) {
+	print "No running task\n";
+	exit(1);
+}
+
+$task = (object)$task;
+$start = new Carbon($task->start);
+
+print "[".$start->toDateTimeString()."] {$task->name}: ".$start->diffForHumans()." [states=".count($task->states)."]\n";
+exit(0);
