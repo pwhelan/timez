@@ -1,0 +1,11 @@
+#!/bin/bash
+
+WINDOWID=`xdotool getactivewindow`
+echo "WINDOWID=\""$WINDOWID"\""
+echo "WINDOWNAME="\""`xdotool getwindowname $WINDOWID`"\""
+echp "WINDOWPID="\""`xdotool getwindowpid $WINDOWID`"\""
+echo "WINDOWBIN="\""`readlink /proc/$WINDOWPID/exe`"\""
+IDLETIMEMS=`xprintidle`
+echo "IDLETIMEMS="\""$IDLETIMEMS"\""
+echo "IDLETIME="\""`expr $IDLETIMEMS / 1000`"\""
+echo "WINDOWCWD="\""`readlink /proc/$WINDOWPID/cwd`"\""

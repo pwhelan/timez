@@ -1,13 +1,15 @@
 #!/bin/bash
 
-WINDOWID=`xdotool getactivewindow` 
-WINDOWNAME=`xdotool getwindowname $WINDOWID`
-WINDOWPID=`xdotool getwindowpid $WINDOWID`
-WINDOWBIN=`readlink /proc/$WINDOWPID/exe`
-IDLETIMEMS=`xprintidle`
-IDLETIME=`expr $IDLETIMEMS / 1000`
-WINDOWCWD=`readlink /proc/$WINDOWPID/cwd`
+if [ -L $0 ]; then
+	REALBIN=`readlink $0`
+	BINDIR=`dirname $REALBIN`
+elif [ -f $0 ]; then
+	BINDIR=`dirname $0`
+fi
 
+
+OS=`uname`
+eval `$BINDIR/state/$OS`
 
 CHILDREN=""
 
@@ -26,11 +28,11 @@ EOF
 	CHILDREN=$CHILDREN" "$CHILD,
 done
 
-cat << EOF | http POST http://127.0.0.1:9137/task/state/ 2>&1 > /dev/null
+cat << EOF http POST http://127.0.0.1:9137/task/state/ 2>&1 > /dev/null
 {
 	"exec": "$WINDOWBIN",
 	"name": "$WINDOWNAME",
-	"idle": "$IDLETIMEMS",
+	"idle": "$IDLETIME",
 	"cwd": "$WINDOWCWD",
 	"pid": "$WINDOWPID",
 	"children": [
@@ -43,5 +45,3 @@ EOF
 if [ "$IDLETIME" -gt `expr 5 '*' 60` ]; then
 	timez stop $IDLETIME 2>&1 > /dev/null
 fi
-
-#echo "id="$WINDOWID "name="$WINDOWNAME "pid="$WINDOWPID

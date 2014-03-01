@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [ -L $0 ]; then
+	REALBIN=`readlink $0`
+	BINDIR=`dirname $REALBIN`
+elif [ -f $0 ]; then
+	BINDIR=`dirname $0`
+fi
+
+
+eval `$BINDIR/osx/nsworkspace`
+IDLETIME=`$BINDIR/osx/idletime`
+
+if [ $WINDOWID == "com.apple.Terminal" ]; then
+	DEVTTY=`osascript -e 'tell first window of application "Terminal" to get tty of selected tab'`
+	TTY=`basename $DEVTTY`
+	WINDOWPID=`ps -o tty,pid,ppid | grep ^$TTY | tail -n 1 | awk -F ' ' '{print $2}'`
+fi
+
+WINDOWCWD=`lsof -a -d cwd -p $WINDOWPID | tail -n 1 | awk -F ' ' '{print $9}'`
+WINDOWBIN=`lsof -a -d txt -p $WINDOWPID | head -n 2 | tail -n 1 | awk -F ' ' '{print $9}'`
+
+echo "WINDOWBIN=\""$WINDOWBIN"\""
+echo "WINDOWNAME=\""$WINDOWNAME"\""
+echo "IDLETIME=\""$IDLETIME"\""
+echo "WINDOWCWD=\""$WINDOWCWD"\""
+echo "WINDOWPID=\""$WINDOWPID"\""

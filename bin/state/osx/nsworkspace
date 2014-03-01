@@ -1,0 +1,34 @@
+#!/usr/bin/python
+
+# TODO: identify active tab for Terminal.app
+import sys
+from AppKit import NSWorkspace
+
+activeApp = NSWorkspace.sharedWorkspace().activeApplication()
+
+#print activeApp
+"""
+{
+    NSApplicationBundleIdentifier = "com.apple.Terminal";
+    NSApplicationName = Terminal;
+    NSApplicationPath = "/Applications/Utilities/Terminal.app";
+    NSApplicationProcessIdentifier = 923;
+    NSApplicationProcessSerialNumberHigh = 0;
+    NSApplicationProcessSerialNumberLow = 487543;
+    NSWorkspaceApplicationKey = "<NSRunningApplication: 0x7fa28d104c90 (com.apple.Terminal - 923)>";
+}
+"""
+
+if len(sys.argv) <= 1:
+	print "WINDOWID=\"" + activeApp['NSApplicationBundleIdentifier'] + "\""
+	print "WINDOWNAME=\"" + activeApp['NSApplicationName'] + "\""
+	print "WINDOWPID=\"" + str(activeApp['NSApplicationProcessIdentifier']) + "\""
+	print "WINDOWPATH=\"" + activeApp['NSApplicationPath'] + "\""
+elif sys.argv[1] == 'getwindowname':
+	print activeApp['NSApplicationName']
+elif sys.argv[1] == 'getwindowpid':
+	print activeApp['NSApplicationProcessIdentifier']
+elif sys.argv[1] == 'getwindowpath':
+	print activeApp['NSApplicationPath']
+elif sys.argv[1] == 'getwindowid':
+	print activeApp['NSApplicationBundleIdentifier']
