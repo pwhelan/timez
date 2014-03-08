@@ -2,6 +2,9 @@
 
 require __DIR__.'/../vendor/autoload.php';
 
+
+use Carbon\Carbon;
+
 $m = new MongoClient(); // connect
 $db = $m->timez; // get the database named "foo"
 $timez = $db->tasks;
@@ -9,14 +12,24 @@ $timez = $db->tasks;
 
 $app = new Slim\Slim();
 
-$app->get('/task/', function() use ($timez) {
-	$task = $timez->findOne(['active' => true]);
-	print json_encode($task);
-});
-
-$app->get('/task/:id', function($id) use ($timez) {
-	$task = $timez->findOne(['_id' => new MongoId($id)]);
-	print json_encode($task);
+$app->get('/task/(:id)', function($id = 0) use ($app, $timez) {
+	if ($id) $timez->findOne(['_id-' => new MongoId($id)]);
+	else $task = $timez->findOne(['active' => true]);
+	
+	if (empty($task)) {
+		$app->render(404, [
+			'error' => $id ? 
+				'Not Found' : 
+				'No Active Task'
+		]);
+	}
+	
+	$task['start'] = Carbon::createFromTimestamp(
+			(int)explode(' ', (string)$task['start'])[1]
+		)
+		->format('c');
+	
+	$app->render(200, $task);
 });
 
 $app->post('/task/stop/(:id(/:offset))', function($id = 0, $offset = 0) use ($app, $timez) {
@@ -38,30 +51,34 @@ $app->post('/task/stop/(:id(/:offset))', function($id = 0, $offset = 0) use ($ap
 			['active' => true],
 		['$set' => [
 			'active' => false, 
-			'stop' => date('c', strtotime('-'.abs($offset).' seconds'))
+			'stop' => new MongoDate(strtotime('-'.abs($offset).' seconds'))
 		]],
 		['new' => true]
 	);
+	$task['start'] = Carbon::createFromTimestamp((int)explode(' ', (string)$task['start'])[1])->format('c');
 	print json_encode($task);
 });
 
 $app->post('/task/(:name)', function($name = null) use ($app, $timez) {
 	
 	$task = [
-		'start' 	=> date('c'),
+		'start' 	=> new MongoDate(),
 		'active'	=> true,
 		'name'		=> $name ? $name : 'Task #'.time()
 	];
 	
 	$timez->insert($task);
-	print json_encode($task);
+	$task['start'] = Carbon::createFromTimestamp(
+			(int)explode(' ', (string)$task['start'])[1]
+		)->format('c');
+	
+	$app->render(201, $task);
 });
 
 $app->post('/task/state/(:id)', function($id = null) use ($app, $timez) {
 	
-	print "ID = {$id}\n";
 	$state = json_decode($app->request->getBody());
-	$state->date = date('c');
+	$state->date = new MongoDate();
 	
 	$task = $timez->update(
 		$id == null ?
@@ -70,8 +87,32 @@ $app->post('/task/state/(:id)', function($id = null) use ($app, $timez) {
 		['$push' => ['states' => $state]]
 	);
 	
-	print json_encode($task);
+	$task['start'] = Carbon::createFromTimestamp(
+			(int)explode(' ', (string)$task['start'])[1]
+		)
+		->format('c');
+	
+	$app->render(201, $task);
 });
+
+$app->post('/task/state/note/(:id)', function($id = null) use ($app, $timez) {
+	
+	$note = json_decode($app->request->getBody());
+	$note->date = new MongoDate();
+	
+	$task = $timez->update(
+		$id == null ?
+			['active' => true] : 
+			['_id' => new MongoId($id), 'active' => true],
+		['$push' => ['notes' => $note]]
+	);
+	
+	$app->render(201, []);
+});
+
+
+$app->view(new \JsonApiView());
+$app->add(new \JsonApiMiddleware());
 
 $app->run();
 

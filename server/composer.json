@@ -2,6 +2,7 @@
 	"require": {
 		"slim/slim": "2.4.2",
 		"nesbot/carbon": "1.8.0",
-		"guzzle/guzzle": "v3.8.1"
+		"guzzle/guzzle": "v3.8.1",
+		"entomb/slim-json-api": "dev-master"
 	}
 }
