@@ -13,7 +13,6 @@ $app->group('/task', function() use ($app) {
 	$app->view(new \JsonApiView());
 	$app->add(new \JsonApiMiddleware());
 	
-	
 	$app->get('/(:id)', function($id = 0) use ($app) {
 		if ($id) $app->tasks->findOne(['_id-' => new MongoId($id)]);
 		else $task = $app->tasks->findOne(['active' => true]);
@@ -76,7 +75,7 @@ $app->group('/task', function() use ($app) {
 		
 		$app->render(201, $task);
 	});
-
+	
 	$app->post('/state/(:id)', function($id = null) use ($app) {
 		
 		$state = json_decode($app->request->getBody());
@@ -113,6 +112,29 @@ $app->group('/task', function() use ($app) {
 	});
 });
 
+
+$app->group('/web', function() use ($app) {
+	
+	$app->view(new Slim\Views\MtHamlTwig);
+	$app->add(new \Zeuxisoo\Whoops\Provider\Slim\WhoopsMiddleware);
+	
+	$app->get('/', function () use ($app) {
+		$active = $app->tasks->findOne(['active' => true]);
+		$app->render('index.haml', ['active' => $active]);
+	});
+	
+	$app->get('/history', function() use ($app) {
+		$history = $app->tasks
+				->find([/*'active' => false*/], ['name', 'start', 'end'])
+				->sort(['start' => -1]);
+		$app->render('history.haml', ['history' => $history]);
+	});
+});
+
+$app->config([
+	'templates.path'=> __DIR__.'/../app/views/'
+]);
+
 $app->container->singleton('tasks', function () {
 	$m = new MongoClient(); // connect
 	$db = $m->timez; // get the database named "foo"
@@ -120,4 +142,3 @@ $app->container->singleton('tasks', function () {
 });
 
 $app->run();
-
