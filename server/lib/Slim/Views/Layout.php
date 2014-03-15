@@ -41,37 +41,38 @@ namespace Slim\Views;
  * - hamlCacheDirectory
  *
  * @package Slim
- * @author  Adrian Demleitner <http://ichbinadrian.ch/>
+ * @author  Phillip Whelan <pwhelan@mixxx.org>
  */
-class MtHamlTwig extends \Slim\View
+class Layout extends \Slim\View
 {
+	protected $View;
+	protected $Layout;
+	
+	public function __construct(\Slim\View $View, $Layout)
+	{
+		parent::__construct();
+		$this->View = $View;
+		$this->Layout = $Layout;
+	}
+	
+	public function setTemplatesDirectory($dir)
+	{
+		parent::setTemplatesDirectory($dir);
+		$this->View->setTemplatesDirectory($dir);
+	}
+	
 	/**
-	 * @var string The path to the templates folder WITH the trailing slash
-	 */
-	public static $mthamlCacheDirectory = '../app/cache/mthamltwig';
-
-
-	/**
-	 * Renders a template using Haml.php.
+	 * Renders Templates with layouts.
 	 *
 	 * @see View::render()
 	 * @throws RuntimeException If MtHaml lib directory does not exist.
 	 * @param string $template The template name specified in Slim::render()
 	 * @return string
-	 */
+	 */	
 	public function render($template, $data = null)
 	{
-		$mthaml = new \MtHaml\Environment('twig', array('enable_escaper' => false));
-		$twig_filesystem = new \Twig_Loader_Filesystem(array($this->getTemplatesDirectory()));
-		$twig_loader = new \MtHaml\Support\Twig\Loader($mthaml, $twig_filesystem);
-		
-		$twig = new \Twig_Environment($twig_loader, array(
-			//'cache' => self::$mthamlCacheDirectory
-		));
-		$twig->addExtension(new \MtHaml\Support\Twig\Extension());
-		
-		ob_start();
-		echo $twig->render($template, $this->data->all());
-		return ob_get_clean();
+		$this->View->replace($this->all());
+		$this->View->set('yield', $this->View->render($template, $data));
+		print $this->View->render($this->Layout, $data);
 	}
 }

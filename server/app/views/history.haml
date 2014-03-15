@@ -1,15 +1,11 @@
-%html
-  %head
-    
-  %body
-    %h1 History
-    - for task in history
-      .task
-        %h2 = task.name
-        = task.start
-        = task.end
-        - for state in task.history
-          .state
-            %ul
-              %li = state.name
-              %li = state.exec
+%h1 History
+- for task in history
+  .task
+    %h2 = task.name
+    = task.start
+    = task.end
+    - for state in task.history
+      .state
+        %ul
+          %li = state.name
+          %li = state.exec

@@ -115,7 +115,11 @@ $app->group('/task', function() use ($app) {
 
 $app->group('/web', function() use ($app) {
 	
-	$app->view(new Slim\Views\MtHamlTwig);
+	$app->view(new Slim\Views\Layout(
+		new Slim\Views\MtHaml,
+		'layout.haml'
+	));
+	
 	$app->add(new \Zeuxisoo\Whoops\Provider\Slim\WhoopsMiddleware);
 	
 	$app->get('/', function () use ($app) {
