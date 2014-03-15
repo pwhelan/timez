@@ -1,0 +1,24 @@
+{
+  "name": "timez",
+  "version": "0.0.1",
+  "homepage": "https://github.com/pwhelan/timez",
+  "authors": [
+    "Phillip Whelan <pwhelan@mixxx.org>"
+  ],
+  "description": "Timez: simple app for time tracking.",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "public/js/lib",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "canjs": "2.0.5",
+    "jquery": "1.11.0",
+    "bootstrap": "3.1.1"
+  }
+}

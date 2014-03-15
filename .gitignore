@@ -12,3 +12,6 @@ DEADJOE
 # Ignore server logs
 /server/public/error.log
 /server/public/out.log
+
+# Ignore bower installed JS packages
+/server/public/js/lib/
