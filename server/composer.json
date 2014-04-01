@@ -3,6 +3,14 @@
 		"slim/slim": "2.4.2",
 		"nesbot/carbon": "1.8.0",
 		"guzzle/guzzle": "v3.8.1",
-		"entomb/slim-json-api": "dev-master"
+		"entomb/slim-json-api": "dev-master",
+		"mthaml/mthaml": "1.3.1",
+		"twig/twig": "v1.15.1",
+		"zeuxisoo/slim-whoops": "dev-master"
+	},
+	"autoload": {
+		"psr-0": {
+			"Slim": "lib"
+		}
 	}
 }

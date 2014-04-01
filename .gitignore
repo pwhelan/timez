@@ -6,6 +6,12 @@ DEADJOE
 /server/vendor
 /server/composer.lock
 
+# Ignore server cache
+/server/app/cache
+
 # Ignore server logs
 /server/public/error.log
 /server/public/out.log
+
+# Ignore bower installed JS packages
+/server/public/js/lib/

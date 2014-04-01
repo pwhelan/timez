@@ -1,0 +1,9 @@
+- if active
+  %h1 = active.name
+  - for state in active.states
+    .state
+      %ul
+        %li = state.name
+        %li = state.exec
+- else
+  %h1 no active task
