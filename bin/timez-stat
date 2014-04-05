@@ -17,5 +17,5 @@ if (empty($task)) {
 $task = (object)$task;
 $start = new Carbon($task->start);
 
-print "[".$start->toDateTimeString()."] {$task->name}: ".$start->diffForHumans()." [states=".count($task->states)."]\n";
+print "[".$start->toDateTimeString()."] {$task->name}: ".$start->diffForHumans()." [states=".(isset($task->state) ? count($task->states) : 0)."]\n";
 exit(0);
