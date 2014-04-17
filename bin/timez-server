@@ -4,7 +4,7 @@ function start_server()
 {
 	(cd `dirname $0`;
 		cd ../server/public
-		php -S 0.0.0.0:9137 > out.log 2> error.log
+		php -S 0.0.0.0:9137 > ../log/server-out.log 2> ../log/server-error.log
 	)
 }
 
