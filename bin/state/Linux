@@ -3,7 +3,7 @@
 WINDOWID=`xdotool getactivewindow`
 echo "WINDOWID=\""$WINDOWID"\""
 echo "WINDOWNAME="\""`xdotool getwindowname $WINDOWID`"\""
-echp "WINDOWPID="\""`xdotool getwindowpid $WINDOWID`"\""
+echo "WINDOWPID="\""`xdotool getwindowpid $WINDOWID`"\""
 echo "WINDOWBIN="\""`readlink /proc/$WINDOWPID/exe`"\""
 IDLETIMEMS=`xprintidle`
 echo "IDLETIMEMS="\""$IDLETIMEMS"\""
