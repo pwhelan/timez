@@ -41,7 +41,3 @@ cat << EOF | http POST http://hydra.lan:9137/task/state/ 2>&1 > /dev/null
 	]
 }
 EOF
-
-if [ "$IDLETIME" -gt `expr 5 '*' 60` ]; then
-	timez stop $IDLETIME 2>&1 > /dev/null
-fi
