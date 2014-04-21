@@ -1,3 +1,5 @@
 #!/bin/bash
 
-http POST http://127.0.0.1:9137/task/stop/$1
+eval `cat $HOME/.config/timez/timezrc`
+
+http POST http://$SERVER:9137/task/stop/$1

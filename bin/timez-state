@@ -1,5 +1,7 @@
 #!/bin/bash
 
+eval `cat $HOME/.config/timez/timezrc`
+
 if [ -L $0 ]; then
 	REALBIN=`readlink $0`
 	BINDIR=`dirname $REALBIN`
@@ -28,7 +30,7 @@ EOF
 	CHILDREN=$CHILDREN" "$CHILD,
 done
 
-cat << EOF | http POST http://hydra.lan:9137/task/state/ 2>&1 > /dev/null
+cat << EOF | http POST http://$SERVER:9137/task/state/ 2>&1 > /dev/null
 {
 	"exec": "$WINDOWBIN",
 	"name": "$WINDOWNAME",
