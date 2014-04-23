@@ -67,6 +67,6 @@ class Layout extends \Slim\View
 	{
 		$this->View->replace($this->all());
 		$this->View->set('yield', $this->View->render($template, $data));
-		print $this->View->render($this->Layout, $data);
+		print $this->View->render($this->Layout, $this->View->all());
 	}
 }
