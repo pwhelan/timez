@@ -1,9 +1,0 @@
-- if (@$active)
-  %h1 = active.name
-  - foreach ($active['states'] as $state)
-    .state
-      %ul
-        %li = state.name
-        %li = state.exec
-- else
-  %h1 no active task

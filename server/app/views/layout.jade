@@ -1,0 +1,15 @@
+html
+  head
+    script(src="/js/lib/jquery/dist/jquery.js")
+    script(src="/js/lib/canjs/can.jquery.js")
+    link(rel="stylesheet",type="text/css",href="/js/lib/bootstrap/dist/css/bootstrap.min.css")
+    link(rel="stylesheet", type="text/css", href="/js/lib/bootstrap/dist/css/bootstrap-theme.min.css")
+    script(src="/js/lib/bootstrap/dist/js/bootstrap.min.js")
+  body
+    div.nav.navbar.navbar-default(role="navigation")
+      div.container-fliud
+        div.navbar-header
+          button.navbar-toggle(type="button", data-toggle="collapse", data-target="#bs-example-navbar-collapse-1")
+            span.sr-only Toggle Navigation
+    = yield
+  footer

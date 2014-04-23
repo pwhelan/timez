@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Slim - a micro PHP 5 framework
  *
@@ -30,48 +31,38 @@
 namespace Slim\Views;
 
 /**
- * MTHamlView
+ * Lavender
  *
- * The HamlView is a Custom View class that renders templates using the
- * HAML template language (http://haml-lang.com/) through the use of
- * MTHaml (https://github.com/arnaud-lb/MtHaml).
- *
- * There are two field that you, the developer, will need to change:
- * - hamlDirectory
- * - hamlCacheDirectory
- *
+ * Lavender Template adaptor for Slim 3.0
  * @package Slim
- * @author  Adrian Demleitner <http://ichbinadrian.ch/>
+ * @author  Phillip Whelan <pwhelan@mixxx.org>
  */
-class MtHamlTwig extends \Slim\View
+class Lavender extends \Slim\View
 {
 	/**
-	 * @var string The path to the templates folder WITH the trailing slash
+	 * Constructor
+	 * @param  string $templateDirectory Path to template directory
+	 * @param  array  $items             Initialize set with these items
+	 * @api
 	 */
-	public static $mthamlCacheDirectory = '../app/cache/mthamltwig';
-
-
+	public function __construct($templateDirectory, array $items = array())
+	{
+		\Lavender::config([
+			'view_dir'	=> $templateDirectory,
+			'file_extension'=> 'jade',
+			'handle_errors'	=> true
+		]);
+	}
+	
 	/**
-	 * Renders a template using Haml.php.
+	 * Renders a template using Lavender
 	 *
 	 * @see View::render()
-	 * @throws RuntimeException If MtHaml lib directory does not exist.
 	 * @param string $template The template name specified in Slim::render()
 	 * @return string
-	 */
+	 */	
 	public function render($template, array $data = null)
 	{
-		$mthaml = new \MtHaml\Environment('twig', array('enable_escaper' => false));
-		$twig_filesystem = new \Twig_Loader_Filesystem(array($this->templateDirectory));
-		$twig_loader = new \MtHaml\Support\Twig\Loader($mthaml, $twig_filesystem);
-		
-		$twig = new \Twig_Environment($twig_loader, array(
-			//'cache' => self::$mthamlCacheDirectory
-		));
-		$twig->addExtension(new \MtHaml\Support\Twig\Extension());
-		
-		ob_start();
-		echo $twig->render($template, $this->data);
-		return ob_get_clean();
+		return \Lavender::view($template)->compile($data);
 	}
 }
