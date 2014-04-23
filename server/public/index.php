@@ -146,34 +146,40 @@ $app->group('/task', function() use ($app) {
 	});
 	
 	
-	$app->get('/worker', function() use ($app) {
-		
-		if (php_sapi_name() != 'cli')
-		{
-			die("WRONG SAPI=".php_sapi_name()."\n");
-		}
-		
-		$shm = shm_attach($app->shared->id);
-		shm_put_var($shm, $app->shared->worker_pid, getmypid());
-		
-		pcntl_signal(SIGALRM, function() use ($app) {
-			
-			$app->tasks->update(
-				['active' => true],
-				['$set' => ['active' => false]]
-			);
-			
-		});
-		
-		pcntl_alarm(60 * 5);
-		while (1):
-			$info = [];
-			sleep(5);
-		endwhile;
-			
-	});
 });
 
+$app->get('/worker', function() use ($app) {
+	
+	$timeout = 60;
+	
+	if (php_sapi_name() != 'cli')
+	{
+		die("WRONG SAPI=".php_sapi_name()."\n");
+	}
+	
+	$shm = shm_attach($app['shared']->id);
+	shm_put_var($shm, $app['shared']->worker_pid, getmypid());
+	
+	pcntl_signal(SIGUSR1, function() use ($app, $timeout) {
+		pcntl_alarm($timeout);
+	});
+	
+	pcntl_signal(SIGALRM, function() use ($app, $timeout) {
+		
+		$app['tasks']->update(
+			['active' => true],
+			['$set' => ['active' => false]]
+		);
+		pcntl_alarm($timeout);
+	});
+	
+	pcntl_alarm($timeout);
+	while (1):
+		$info = [];
+		sleep(5);
+	endwhile;
+	
+});
 
 $app->group('/web', function() use ($app) {
 	

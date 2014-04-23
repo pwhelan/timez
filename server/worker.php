@@ -15,7 +15,7 @@ System_Daemon::setOption("appDieOnIdentityCrisis", false);
 System_Daemon::start();
 
 
-$_SERVER['REQUEST_URI'] = '/task/worker';
+$_SERVER['REQUEST_URI'] = '/worker';
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 $_SERVER['SERVER_NAME'] = 'localhost';
