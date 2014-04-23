@@ -48,17 +48,11 @@ class Layout extends \Slim\View
 	protected $View;
 	protected $Layout;
 	
-	public function __construct(\Slim\View $View, $Layout)
+	public function __construct($templatesDirectory, \Slim\View $View, $Layout)
 	{
-		parent::__construct();
+		parent::__construct($templatesDirectory);
 		$this->View = $View;
 		$this->Layout = $Layout;
-	}
-	
-	public function setTemplatesDirectory($dir)
-	{
-		parent::setTemplatesDirectory($dir);
-		$this->View->setTemplatesDirectory($dir);
 	}
 	
 	/**
@@ -69,7 +63,7 @@ class Layout extends \Slim\View
 	 * @param string $template The template name specified in Slim::render()
 	 * @return string
 	 */	
-	public function render($template, $data = null)
+	public function render($template, array $data = null)
 	{
 		$this->View->replace($this->all());
 		$this->View->set('yield', $this->View->render($template, $data));

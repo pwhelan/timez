@@ -1,6 +1,6 @@
-- if active
+- if (@$active)
   %h1 = active.name
-  - for state in active.states
+  - foreach ($active['states'] as $state)
     .state
       %ul
         %li = state.name

@@ -5,18 +5,18 @@ require_once __DIR__.'/../vendor/autoload.php';
 
 use Carbon\Carbon;
 
-$app = new Slim\Slim();
+$app = new Slim\App();
 
 
 $app->group('/task', function() use ($app) {
-	
-	$app->view(new \JsonApiView());
-	$app->add(new \JsonApiMiddleware());
+		
+	$app['view'] = new \JsonApiView($app);
+	//$app->add(new \JsonApiMiddleware($app));
 	
 	$app->get('/(:id)', function($id = 0) use ($app) {
 		
-		if ($id) $app->tasks->findOne(['_id-' => new MongoId($id)]);
-		else $task = $app->tasks->findOne(['active' => true]);
+		if ($id) $app['tasks']->findOne(['_id-' => new MongoId($id)]);
+		else $task = $app['tasks']->findOne(['active' => true]);
 		
 		if (empty($task)) {
 			$app->render(404, [
@@ -42,7 +42,7 @@ $app->group('/task', function() use ($app) {
 			$id = 0;
 		}
 		
-		$task = $app->tasks->update(
+		$rc = $app['tasks']->update(
 			$id ? 
 				(ctype_xdigit($id) && $id ?
 					['_id' => new MongoId($id), 'active' => true] :
@@ -58,11 +58,19 @@ $app->group('/task', function() use ($app) {
 			]],
 			['new' => true]
 		);
-		$task['start'] = Carbon::createFromTimestamp((int)explode(' ', (string)$task['start'])[1])->format('c');
-		print json_encode($task);
+		
+		print json_encode(['rc' => $rc]);
 	});
 
 	$app->post('/(:name)', function($name = null) use ($app) {
+		
+		$app['tasks']->update(
+			['active' => true],
+			['$set' => [
+				'active' => false, 
+				'stop' => new MongoDate(time())
+			]]
+		);
 		
 		$task = [
 			'start' 	=> new MongoDate(),
@@ -70,7 +78,7 @@ $app->group('/task', function() use ($app) {
 			'name'		=> $name ? $name : 'Task #'.time()
 		];
 		
-		$app->tasks->insert($task);
+		$app['tasks']->insert($task);
 		$task['start'] = Carbon::createFromTimestamp(
 				(int)explode(' ', (string)$task['start'])[1]
 			)->format('c');
@@ -80,62 +88,62 @@ $app->group('/task', function() use ($app) {
 	
 	$app->post('/state/(:id)', function($id = null) use ($app) {
 		
-		$state = json_decode($app->request->getBody());
+		$state = json_decode($app['request']->getBody());
 		$state->date = new MongoDate();
 		
+		$shm = shm_attach($app['shared']->id);
 		
-		$shm = shm_attach($app->shared->id);
-		
-		if (shm_has_var($shm, $app->shared->worker_pid))
+		if (shm_has_var($shm, $app['shared']->worker_pid))
 		{
-			$worker_pid = shm_get_var($shm, $app->shared->worker_pid);
+			$worker_pid = shm_get_var($shm, $app['shared']->worker_pid);
 			
-			
-			if (shm_get_var($shm, $app->shared->idletimes))
+						
+			if (shm_has_var($shm, $app['shared']->idletimes))
 			{
-				$idletimes = shm_get_var($shm, $app->shared->idletimes);
+				$idletimes = shm_get_var($shm, $app['shared']->idletimes);
 				
-				if (isset($idletimes[$app->request->getIp()]))
+				
+				if (isset($idletimes[$app['request']->getIp()]))
 				{
-					$last_idle = $idletimes[$app->request->getIp()];
+					$last_idle = $idletimes[$app['request']->getIp()];
 					if ($state->idle <= $last_idle && $state->idle < (60 * 5))
 					{
-						pcntl_kill($worker_pid, SIGALRM);
+						posix_kill($worker_pid, SIGUSR1);
 					}
 				}
 				
-				$idletimes[$app->request->getIp()] = $state->idle;
+				$idletimes[$app['request']->getIp()] = $state->idle;
 			}
 			else
 			{
-				$idletimes = [$app->request->getIp() => $state->idle];
+				$idletimes = [$app['request']->getIp() => $state->idle];
 			}
 			
-			shm_put_var($shm, $app->shared->idletimes, $idletimes);
+			shm_put_var($shm, $app['shared']->idletimes, $idletimes);
 		}
 		
 		
-		$task = $app->tasks->update(
+		$rc = $app['tasks']->update(
 			$id == null ?
 				['active' => true] : 
 				['_id' => new MongoId($id), 'active' => true],
 			['$push' => ['states' => $state]]
 		);
 		
-		$task['start'] = Carbon::createFromTimestamp(
-				(int)explode(' ', (string)$task['start'])[1]
-			)
-			->format('c');
+		if (!$rc['updatedExisting'])
+		{
+			$app->render(404, ["error" => "No running task"]);
+		}
 		
-		$app->render(201, $task);
+		$app->render(201, $rc);
 	});
 	
 	$app->post('/note/(:id)', function($id = null) use ($app) {
 		
-		$note = json_decode($app->request->getBody());
+		$note = json_decode($app['request']->getBody());
 		$note->date = new MongoDate();
 		
-		$task = $app->tasks->update(
+		$task = $app['tasks']->update(
 			$id == null ?
 				['active' => true] : 
 				['_id' => new MongoId($id), 'active' => true],
@@ -183,20 +191,22 @@ $app->get('/worker', function() use ($app) {
 
 $app->group('/web', function() use ($app) {
 	
-	$app->view(new Slim\Views\Layout(
-		new Slim\Views\MtHaml,
+	$app['view'] = new Slim\Views\Layout(
+		__DIR__.'/../app/views/',
+		new Slim\Views\MtHaml(__DIR__.'/../app/views/'),
 		'layout.haml'
-	));
+	);
 	
-	$app->add(new \Zeuxisoo\Whoops\Provider\Slim\WhoopsMiddleware);
+	
+	//$app->add(new \Zeuxisoo\Whoops\Provider\Slim\WhoopsMiddleware);
 	
 	$app->get('/', function () use ($app) {
-		$active = $app->tasks->findOne(['active' => true]);
+		$active = $app['tasks']->findOne(['active' => true]);
 		$app->render('index.haml', ['active' => $active]);
 	});
 	
 	$app->get('/history', function() use ($app) {
-		$history = $app->tasks
+		$history = $app['tasks']
 				->find([/*'active' => false*/], ['name', 'start', 'end'])
 				->sort(['start' => -1]);
 		$app->render('history.haml', ['history' => $history]);
@@ -207,18 +217,24 @@ $app->config([
 	'templates.path'=> __DIR__.'/../app/views/'
 ]);
 
-$app->container->singleton('tasks', function () {
-	$m = new MongoClient(); // connect
-	$db = $m->timez; // get the database named "foo"
-	return $db->tasks;
-});
+$app['mongo'] = function($c) {
+	return new MongoClient;
+};
 
-$app->container->singleton('shared', function() {
+$app['mongo:timez'] = function($c) {
+	return $c['mongo']->timez;
+};
+
+$app['tasks'] = function ($c) {
+	return $c['mongo:timez']->tasks;
+};
+
+$app['shared'] = function($c) {
 	return (object)[
 		'id'		=> 0xf00f0000,
 		'worker_pid'	=> 0xf00f0001,
 		'idletimes'	=> 0xf00f0002
 	];
-});
+};
 
 $app->run();

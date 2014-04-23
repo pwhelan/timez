@@ -59,10 +59,10 @@ class MtHaml extends \Slim\View
 	 * @param string $template The template name specified in Slim::render()
 	 * @return string
 	 */	
-	public function render($template, $data = null)
+	public function render($template, array $data = null)
 	{
 		$mthaml = new \MtHaml\Environment('php', array('enable_escaper' => false));
-		$compiled_content = $mthaml->compileString(file_get_contents($this->getTemplatesDirectory() . "/" . $template), $template);
+		$compiled_content = $mthaml->compileString(file_get_contents($this->templateDirectory . "/" . $template), $template);
 		return $this->evaluate($compiled_content, $this->data);
 	}
 	
@@ -71,7 +71,7 @@ class MtHaml extends \Slim\View
 	 * @param string $content PHP code to evaluate
 	 * @param array $contentVariables variables to be evaluated in said PHP code
 	 */
-	public function evaluate($content, $contentVariables = null)
+	public function evaluate($content, array $contentVariables = null)
 	{
 		$tempFileName = tempnam("/tmp", "foo");
 		$fp = fopen($tempFileName, "w");
@@ -79,7 +79,7 @@ class MtHaml extends \Slim\View
 		
 		ob_start();
 		if ($contentVariables) {
-			extract((array)$contentVariables->all());
+			extract((array)$contentVariables);
 		}
 		
 		require $tempFileName;

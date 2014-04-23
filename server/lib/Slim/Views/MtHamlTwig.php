@@ -59,10 +59,10 @@ class MtHamlTwig extends \Slim\View
 	 * @param string $template The template name specified in Slim::render()
 	 * @return string
 	 */
-	public function render($template, $data = null)
+	public function render($template, array $data = null)
 	{
 		$mthaml = new \MtHaml\Environment('twig', array('enable_escaper' => false));
-		$twig_filesystem = new \Twig_Loader_Filesystem(array($this->getTemplatesDirectory()));
+		$twig_filesystem = new \Twig_Loader_Filesystem(array($this->templateDirectory));
 		$twig_loader = new \MtHaml\Support\Twig\Loader($mthaml, $twig_filesystem);
 		
 		$twig = new \Twig_Environment($twig_loader, array(
@@ -71,7 +71,7 @@ class MtHamlTwig extends \Slim\View
 		$twig->addExtension(new \MtHaml\Support\Twig\Extension());
 		
 		ob_start();
-		echo $twig->render($template, $this->data->all());
+		echo $twig->render($template, $this->data);
 		return ob_get_clean();
 	}
 }
