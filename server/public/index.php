@@ -2,7 +2,7 @@
 
 require_once __DIR__.'/../vendor/autoload.php';
 
-
+date_default_timezone_set('GMT');
 use Carbon\Carbon;
 
 $app = new Slim\App();
@@ -11,7 +11,7 @@ $app = new Slim\App();
 $app->group('/task', function() use ($app) {
 		
 	$app['view'] = new \JsonApiView($app);
-	//$app->add(new \JsonApiMiddleware($app));
+	
 	
 	$app->get('/(:id)', function($id = 0) use ($app) {
 		
@@ -106,7 +106,7 @@ $app->group('/task', function() use ($app) {
 				if (isset($idletimes[$app['request']->getIp()]))
 				{
 					$last_idle = $idletimes[$app['request']->getIp()];
-					if ($state->idle <= $last_idle && $state->idle < (60 * 5))
+					if ($state->idle <= $last_idle && $state->idle < ($app['timeout']))
 					{
 						posix_kill($worker_pid, SIGUSR1);
 					}
@@ -157,9 +157,7 @@ $app->group('/task', function() use ($app) {
 });
 
 $app->get('/worker', function() use ($app) {
-	
-	$timeout = 60;
-	
+		
 	if (php_sapi_name() != 'cli')
 	{
 		die("WRONG SAPI=".php_sapi_name()."\n");
@@ -168,20 +166,42 @@ $app->get('/worker', function() use ($app) {
 	$shm = shm_attach($app['shared']->id);
 	shm_put_var($shm, $app['shared']->worker_pid, getmypid());
 	
-	pcntl_signal(SIGUSR1, function() use ($app, $timeout) {
-		pcntl_alarm($timeout);
+	pcntl_signal(SIGUSR1, function() use ($app) {
+		pcntl_alarm($app['timeout']);
 	});
 	
-	pcntl_signal(SIGALRM, function() use ($app, $timeout) {
+	pcntl_signal(SIGALRM, function() use ($app) {
+		
+		$shm = shm_attach($app['shared']->id);
+		$minidle = $app['timeout'];
+		
+				
+		if (shm_has_var($shm, $app['shared']->idletimes))
+		{
+			$idletimes = shm_get_var($shm, $app['shared']->idletimes);
+			$minidle = array_reduce(
+				$idletimes,
+				function($result, $idletime) {
+					if ($idletime < $result) {
+						$result = $idletime;
+					}
+					return $result;
+				},
+				$app['timeout']
+			);
+		}
 		
 		$app['tasks']->update(
 			['active' => true],
-			['$set' => ['active' => false]]
+			['$set' => [
+				'active' => false,
+				'stop' => new MongoDate(strtotime('-'.abs($minidle).' seconds'))
+			]]
 		);
-		pcntl_alarm($timeout);
+		pcntl_alarm($app['timeout']);
 	});
 	
-	pcntl_alarm($timeout);
+	pcntl_alarm($app['timeout']);
 	while (1):
 		$info = [];
 		sleep(5);
@@ -193,8 +213,8 @@ $app->group('/web', function() use ($app) {
 	
 	$app['view'] = new Slim\Views\Layout(
 		__DIR__.'/../app/views/',
-		new Slim\Views\MtHaml(__DIR__.'/../app/views/'),
-		'layout.haml'
+		new Slim\Views\Lavender(__DIR__.'/../app/views/'),
+		'layout'
 	);
 	
 	
@@ -202,14 +222,14 @@ $app->group('/web', function() use ($app) {
 	
 	$app->get('/', function () use ($app) {
 		$active = $app['tasks']->findOne(['active' => true]);
-		$app->render('index.haml', ['active' => $active]);
+		$app->render('index', ['active' => $active]);
 	});
 	
 	$app->get('/history', function() use ($app) {
 		$history = $app['tasks']
 				->find([/*'active' => false*/], ['name', 'start', 'end'])
 				->sort(['start' => -1]);
-		$app->render('history.haml', ['history' => $history]);
+		$app->render('history', ['history' => $history]);
 	});
 });
 
@@ -236,5 +256,10 @@ $app['shared'] = function($c) {
 		'idletimes'	=> 0xf00f0002
 	];
 };
+
+$app['timeout'] = function($c) {
+	return 5 * 60;
+};
+
 
 $app->run();
