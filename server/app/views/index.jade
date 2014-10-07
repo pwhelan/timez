@@ -1,9 +1,11 @@
 if active
-  h1 - active.name
+  h1 
+    = active.name
   each state in active.states
-    .state
-      %ul
-        %li - state.name
-        %li - state.exec
+    div.state
+      ul
+        li 
+          = state.name
+          = state.exec
 else
   h1 no active task
