@@ -5,14 +5,32 @@ require __DIR__.'/../server/vendor/autoload.php';
 use Guzzle\Http\Client;
 use Carbon\Carbon;
 
+$CONFIG = [];
+$CONFIG_LINES = file_get_contents(getenv('HOME').'/.config/timez/timezrc');
 
-$http = new Client("http://127.0.0.1:9137");
+foreach (explode("\n", $CONFIG_LINES) as $CONFIG_LINE) {
+	list( $a, $b ) = array_merge(explode( '=', $CONFIG_LINE ), array(NULL, NULL));
+	if (!$a || !$b) {
+		continue;
+	}
+	$CONFIG[$a] = rtrim($b);
+}
 
-$task = $http->get('/task/')->send()->json();
+$http = new Client("http://{$CONFIG['SERVER']}:9137");
+
+try {
+	$task = $http->get('/task/')->send()->json();
+}
+catch(Guzzle\Http\Exception\ClientErrorResponseException $httpError)
+{	
+	$task = null;
+}
+
 if (empty($task)) {
 	print "No running task\n";
 	exit(1);
 }
+
 
 $task = (object)$task;
 $start = new Carbon($task->start);

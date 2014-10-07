@@ -6,7 +6,7 @@
 function do_periodic() 
 {
 	# @TODO: use $0 to get the actual bin directory...
-	while (sleep 15 && /home/pwhelan/bin/timez state) &
+	while (sleep 15 && timez state) &
 	do
 		wait $!
 	done
