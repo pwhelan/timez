@@ -30,7 +30,7 @@ EOF
 	CHILDREN=$CHILDREN" "$CHILD,
 done
 
-cat << EOF | http POST http://$SERVER:9137/task/state/ 2>&1 > /dev/null
+cat << EOF | http POST http://$SERVER:9137/task/state 2>&1 > /dev/null
 {
 	"exec": "$WINDOWBIN",
 	"name": "$WINDOWNAME",
