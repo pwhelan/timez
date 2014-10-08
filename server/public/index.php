@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__.'/../vendor/autoload.php';
+require_once __DIR__.'/../../vendor/autoload.php';
 
 date_default_timezone_set('GMT');
 use Carbon\Carbon;
@@ -61,7 +61,7 @@ $app->group('/task', function() use ($app) {
 		
 		print json_encode(['rc' => $rc]);
 	});
-
+	
 	$app->post('/(:name)', function($name = null) use ($app) {
 		
 		$app['tasks']->update(
@@ -153,7 +153,6 @@ $app->group('/task', function() use ($app) {
 		$app->render(201, []);
 	});
 	
-	
 });
 
 $app->get('/worker', function() use ($app) {
@@ -227,8 +226,8 @@ $app->group('/web', function() use ($app) {
 	
 	$app->get('/history', function() use ($app) {
 		$history = $app['tasks']
-				->find([/*'active' => false*/], ['name', 'start', 'end'])
-				->sort(['start' => -1]);
+			->find([/*'active' => false*/], ['name', 'start', 'end'])
+			->sort(['start' => -1]);
 		$app->render('history', ['history' => $history]);
 	});
 });
