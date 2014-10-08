@@ -5,154 +5,153 @@ require_once __DIR__.'/../../vendor/autoload.php';
 date_default_timezone_set('GMT');
 use Carbon\Carbon;
 
-$app = new Slim\App();
+$app = new Silex\Application();
 
 
-$app->group('/task', function() use ($app) {
-		
+$task = $app['controller_factory'];
+
+$task->before(function() {
 	$app['view'] = new \JsonApiView($app);
+});
+
+$task->get('/(:id)', function($id = 0) use ($app) {
 	
+	if ($id) $app['tasks']->findOne(['_id-' => new MongoId($id)]);
+	else $task = $app['tasks']->findOne(['active' => true]);
 	
-	$app->get('/(:id)', function($id = 0) use ($app) {
-		
-		if ($id) $app['tasks']->findOne(['_id-' => new MongoId($id)]);
-		else $task = $app['tasks']->findOne(['active' => true]);
-		
-		if (empty($task)) {
-			$app->render(404, [
-				'error' => $id ? 
-					'Not Found' : 
-					'No Active Task'
-			]);
-		}
-		
-		$task['start'] = Carbon::createFromTimestamp(
-				(int)explode(' ', (string)$task['start'])[1]
-			)
-			->format('c');
-		
-		$app->render(200, $task);
-		
-	})->conditions(['id' => '[a-zA-Z\d]+']);
+	if (empty($task)) {
+		$app->render(404, [
+			'error' => $id ? 
+				'Not Found' : 
+				'No Active Task'
+		]);
+	}
 	
-	$app->post('/stop/(:id(/:offset))', function($id = 0, $offset = 0) use ($app) {
-		
-		if (ctype_digit($id) && $offset == 0) {
-			$offset = $id;
-			$id = 0;
-		}
-		
-		$rc = $app['tasks']->update(
-			$id ? 
-				(ctype_xdigit($id) && $id ?
-					['_id' => new MongoId($id), 'active' => true] :
-					(ctype_digit($id) ? 
-						['name' => $id, 'active' => true] :
-						['active' => true]
-					)
-				) :
-				['active' => true],
-			['$set' => [
-				'active' => false, 
-				'stop' => new MongoDate(strtotime('-'.abs($offset).' seconds'))
-			]],
-			['new' => true]
-		);
-		
-		print json_encode(['rc' => $rc]);
-	});
+	$task['start'] = Carbon::createFromTimestamp(
+			(int)explode(' ', (string)$task['start'])[1]
+		)
+		->format('c');
 	
-	$app->post('/(:name)', function($name = null) use ($app) {
-		
-		$app['tasks']->update(
+	$app->render(200, $task);
+	
+})->conditions(['id' => '[a-zA-Z\d]+']);
+
+$task->post('/stop/(:id(/:offset))', function($id = 0, $offset = 0) use ($app) {
+	
+	if (ctype_digit($id) && $offset == 0) {
+		$offset = $id;
+		$id = 0;
+	}
+	
+	$rc = $app['tasks']->update(
+		$id ? 
+			(ctype_xdigit($id) && $id ?
+				['_id' => new MongoId($id), 'active' => true] :
+				(ctype_digit($id) ? 
+					['name' => $id, 'active' => true] :
+					['active' => true]
+				)
+			) :
 			['active' => true],
-			['$set' => [
-				'active' => false, 
-				'stop' => new MongoDate(time())
-			]]
-		);
-		
-		$task = [
-			'start' 	=> new MongoDate(),
-			'active'	=> true,
-			'name'		=> $name ? $name : 'Task #'.time()
-		];
-		
-		$app['tasks']->insert($task);
-		$task['start'] = Carbon::createFromTimestamp(
-				(int)explode(' ', (string)$task['start'])[1]
-			)->format('c');
-		
-		$app->render(201, $task);
-	});
+		['$set' => [
+			'active' => false, 
+			'stop' => new MongoDate(strtotime('-'.abs($offset).' seconds'))
+		]],
+		['new' => true]
+	);
 	
-	$app->post('/state/(:id)', function($id = null) use ($app) {
+	print json_encode(['rc' => $rc]);
+});
+
+$task->post('/(:name)', function($name = null) use ($app) {
+	
+	$app['tasks']->update(
+		['active' => true],
+		['$set' => [
+			'active' => false, 
+			'stop' => new MongoDate(time())
+		]]
+	);
+	
+	$task = [
+		'start' 	=> new MongoDate(),
+		'active'	=> true,
+		'name'		=> $name ? $name : 'Task #'.time()
+	];
+	
+	$app['tasks']->insert($task);
+	$task['start'] = Carbon::createFromTimestamp(
+			(int)explode(' ', (string)$task['start'])[1]
+		)->format('c');
+	
+	$app->render(201, $task);
+});
+
+$task->post('/state/(:id)', function($id = null) use ($app) {
+	
+	$state = json_decode($app['request']->getBody());
+	$state->date = new MongoDate();
+	
+	$shm = shm_attach($app['shared']->id);
+	
+	if (shm_has_var($shm, $app['shared']->worker_pid))
+	{
+		$worker_pid = shm_get_var($shm, $app['shared']->worker_pid);
 		
-		$state = json_decode($app['request']->getBody());
-		$state->date = new MongoDate();
-		
-		$shm = shm_attach($app['shared']->id);
-		
-		if (shm_has_var($shm, $app['shared']->worker_pid))
+					
+		if (shm_has_var($shm, $app['shared']->idletimes))
 		{
-			$worker_pid = shm_get_var($shm, $app['shared']->worker_pid);
+			$idletimes = shm_get_var($shm, $app['shared']->idletimes);
 			
-						
-			if (shm_has_var($shm, $app['shared']->idletimes))
+			
+			if (isset($idletimes[$app['request']->getIp()]))
 			{
-				$idletimes = shm_get_var($shm, $app['shared']->idletimes);
-				
-				
-				if (isset($idletimes[$app['request']->getIp()]))
+				$last_idle = $idletimes[$app['request']->getIp()];
+				if ($state->idle <= $last_idle && $state->idle < ($app['timeout']))
 				{
-					$last_idle = $idletimes[$app['request']->getIp()];
-					if ($state->idle <= $last_idle && $state->idle < ($app['timeout']))
-					{
-						posix_kill($worker_pid, SIGUSR1);
-					}
+					posix_kill($worker_pid, SIGUSR1);
 				}
-				
-				$idletimes[$app['request']->getIp()] = $state->idle;
-			}
-			else
-			{
-				$idletimes = [$app['request']->getIp() => $state->idle];
 			}
 			
-			shm_put_var($shm, $app['shared']->idletimes, $idletimes);
+			$idletimes[$app['request']->getIp()] = $state->idle;
 		}
-		
-		
-		$rc = $app['tasks']->update(
-			$id == null ?
-				['active' => true] : 
-				['_id' => new MongoId($id), 'active' => true],
-			['$push' => ['states' => $state]]
-		);
-		
-		if (!$rc['updatedExisting'])
+		else
 		{
-			$app->render(404, ["error" => "No running task"]);
+			$idletimes = [$app['request']->getIp() => $state->idle];
 		}
 		
-		$app->render(201, $rc);
-	});
+		shm_put_var($shm, $app['shared']->idletimes, $idletimes);
+	}
 	
-	$app->post('/note/(:id)', function($id = null) use ($app) {
-		
-		$note = json_decode($app['request']->getBody());
-		$note->date = new MongoDate();
-		
-		$task = $app['tasks']->update(
-			$id == null ?
-				['active' => true] : 
-				['_id' => new MongoId($id), 'active' => true],
-			['$push' => ['notes' => $note]]
-		);
-		
-		$app->render(201, []);
-	});
 	
+	$rc = $app['tasks']->update(
+		$id == null ?
+			['active' => true] : 
+			['_id' => new MongoId($id), 'active' => true],
+		['$push' => ['states' => $state]]
+	);
+	
+	if (!$rc['updatedExisting'])
+	{
+		$app->render(404, ["error" => "No running task"]);
+	}
+	
+	$app->render(201, $rc);
+});
+
+$task->post('/note/(:id)', function($id = null) use ($app) {
+	
+	$note = json_decode($app['request']->getBody());
+	$note->date = new MongoDate();
+	
+	$task = $app['tasks']->update(
+		$id == null ?
+			['active' => true] : 
+			['_id' => new MongoId($id), 'active' => true],
+		['$push' => ['notes' => $note]]
+	);
+	
+	$app->render(201, []);
 });
 
 $app->get('/worker', function() use ($app) {
