@@ -206,6 +206,7 @@ $app->get('/worker', function(App $app) {
 	$shm = shm_attach($app['shared']->id);
 	shm_put_var($shm, $app['shared']->worker_pid, getmypid());
 	
+	
 	pcntl_signal(SIGUSR1, function() use ($app) {
 		pcntl_alarm($app['timeout']);
 	});
@@ -249,37 +250,101 @@ $app->get('/worker', function(App $app) {
 	
 });
 
-/*
-$app->group('/web', function() use ($app) {
+class LavenderView
+{
+	/**
+	 * Constructor
+	 * @param  string $templateDirectory Path to template directory
+	 * @param  array  $items             Initialize set with these items
+	 * @api
+	 */
+	public function __construct($templateDirectory, array $items = array())
+	{
+		require_once __DIR__.'/../../vendor/lavender/lavender/src/Lavender/lavender.php';
+		Lavender::config([
+			'view_dir'	=> $templateDirectory,
+			'file_extension'=> 'jade',
+			'handle_errors'	=> false
+		]);
+	}
 	
-	$app['view'] = new Slim\Views\Layout(
+	/**
+	 * Renders a template using Lavender
+	 *
+	 * @see View::render()
+	 * @param string $template The template name specified in Slim::render()
+	 * @return string
+	 */	
+	public function render($template, array $data = null)
+	{
+		return \Lavender::view($template)->compile($data);
+	}
+}
+
+
+class Layout
+{
+	protected $View;
+	protected $Layout;
+	
+	
+	public function __construct($templatesDirectory, $View, $Layout)
+	{
+		$this->View = $View;
+		$this->Layout = $Layout;
+	}
+	
+	/**
+	* Renders Templates with layouts.
+	*
+	* @see View::render()
+	* @throws RuntimeException If MtHaml lib directory does not exist.
+	* @param string $template The template name specified in Slim::render()
+	* @return string
+	*/	
+	public function render($template, array $data = null)
+	{
+		return $this->View->render(
+			$this->Layout, 
+			array_merge(
+				$data, 
+				['yield' => $this->View->render($template, $data)]
+			)
+		);
+	}
+}
+
+
+$web = $app['controllers_factory'];
+
+
+$web->before(function() use ($app) {
+	
+	$app['view'] = new Layout(
 		__DIR__.'/../app/views/',
-		new Slim\Views\Lavender(__DIR__.'/../app/views/'),
+		new LavenderView(__DIR__.'/../app/views/'),
 		'layout'
 	);
 	
-	
-	//$app->add(new \Zeuxisoo\Whoops\Provider\Slim\WhoopsMiddleware);
-	
-	$app->get('/', function () use ($app) {
-		$active = $app['tasks']->findOne(['active' => true]);
-		$app->render('index', ['active' => $active]);
-	});
-	
-	$app->get('/history', function() use ($app) {
-		$history = $app['tasks']
-			->find(['active' => false], ['name', 'start', 'end'])
-			->sort(['start' => -1]);
-		$app->render('history', ['history' => $history]);
-	});
 });
 
-$app->config([
-	'templates.path'=> __DIR__.'/../app/views/'
-]);
-*/
+
+$web->get('/', function (App $app) {
+	$active = $app['tasks']->findOne(['active' => true]);
+	return $app['view']->render('index', ['active' => $active]);
+});
+
+
+$web->get('/history', function(App $app) {
+	$history = $app['tasks']
+		->find(['active' => false], ['name', 'start', 'end'])
+		->sort(['start' => -1]);
+	return $app['view']->render('history', ['history' => $history]);
+});
+
 
 $app->mount('/task', $task);
+$app->mount('/web', $web);
 
 
 $app['mongo'] = $app->share(function($c) {

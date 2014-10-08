@@ -3,8 +3,8 @@
 DEADJOE
 
 # Ignore composer files
-/server/vendor
-/server/composer.lock
+/vendor
+/composer.lock
 
 # Ignore server cache
 /server/app/cache
@@ -17,3 +17,5 @@ DEADJOE
 
 # Ignore bower installed JS packages
 /server/public/js/lib/
+
+/backups/

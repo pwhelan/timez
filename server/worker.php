@@ -1,7 +1,7 @@
 <?php
 
 
-require_once __DIR__ .'/vendor/autoload.php';
+require_once __DIR__ .'/../vendor/autoload.php';
 
 
 System_Daemon::setOption("appName", "timez-worker");  // Minimum configuration
