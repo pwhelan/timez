@@ -1,6 +1,7 @@
 #!/bin/bash
 
 WINDOWID=`xdotool getactivewindow`
+WINDOWPID=`xdotool getwindowpid $WINDOWID`
 echo "WINDOWID=\""$WINDOWID"\""
 echo "WINDOWNAME="\""`xdotool getwindowname $WINDOWID`"\"
 echo "WINDOWPID="\""`xdotool getwindowpid $WINDOWID`"\"
