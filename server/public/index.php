@@ -83,12 +83,9 @@ $task->post('/state/{id}', function(App $app, Request $request, $id) {
 	
 	
 	$shm = shm_attach($app['shared']->id);
-	
-	if (shm_has_var($shm, $app['shared']->worker_pid))
+	if (isset($state->idle) && shm_has_var($shm, $app['shared']->worker_pid))
 	{
 		$worker_pid = shm_get_var($shm, $app['shared']->worker_pid);
-		
-					
 		if (shm_has_var($shm, $app['shared']->idletimes))
 		{
 			$idletimes = shm_get_var($shm, $app['shared']->idletimes);
@@ -175,21 +172,65 @@ $task->post('/note/{id}', function(App $app, Request $request, $id) {
 
 $task->get('/{id}', function(App $app, $id) {
 	
-	if ($id) $app['tasks']->findOne(['_id-' => new MongoId($id)]);
-	else $task = $app['tasks']->findOne(['active' => true]);
+	$aggregate = [
+		['$match'	=> $id ?
+			['_id' => new MongoId($id)] :
+			['active' => true]
+		],
+		['$project' => [
+			'name'	=> 1,
+			'start'	=> 1,
+			'stop'	=> ['$ifNull' => ['$stop', null]],
+			'active'=> 1,
+			'states'=> 1
+		]],
+		['$unwind' => '$states'],
+		['$group' => [
+			'_id'	=> '$_id',
+			'name'	=> ['$addToSet' => '$name'],
+			'start'	=> ['$addToSet' => '$start'],
+			'stop'	=> ['$addToSet' => '$stop'],
+			'active'=> ['$addToSet' => '$active'],
+			'states'=> ['$sum' => 1]
+		]],
+		['$unwind' => '$start'],
+		['$unwind' => '$name'],
+		['$unwind' => '$stop'],
+		['$unwind' => '$active']
+	];
 	
-	if (empty($task)) {
-		$app->render(404, [
+	
+	$results = $app['tasks']->aggregate($aggregate);
+	
+	if ($results['ok'] != 1)
+	{
+		return $app['view']->render(400, ['error' => 'bad request']);
+	}
+	
+	if (count($results['result']) < 1)
+	{
+		return $app['view']->render(404, [
 			'error' => $id ? 
-				'Not Found' : 
+				'Not Found..' : 
 				'No Active Task'
 		]);
 	}
+	
+	
+	$task = $results['result'][0];
 	
 	$task['start'] = Carbon::createFromTimestamp(
 			(int)explode(' ', (string)$task['start'])[1]
 		)
 		->format('c');
+	
+	if (isset($task['stop']) && $task['stop'])
+	{
+		$task['stop'] = Carbon::createFromTimestamp(
+				(int)explode(' ', (string)$task['stop'])[1]
+			)
+			->format('c');
+	}
 	
 	return $app['view']->render(200, $task);
 	
