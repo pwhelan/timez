@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+#
+
+import Skype4Py
+import Skype4Py.enums
+from time import time, sleep
+import sys
+import urllib2
+import simplejson
+
+
+class TimezLogSkype(object):
+	def __init__(self):
+		self.skype = Skype4Py.Skype(Events=self,Transport='x11')
+		self.skype.FriendlyName = "TimezLogSkype"
+		self.skype.Attach()
+	
+	def AttachmentStatus(self, status):
+		if status == Skype4Py.apiAttachAvailable:
+			self.skype.Attach()
+	
+	def MessageStatus(self, msg, status):
+		try:
+			if status == Skype4Py.cmsReceived or Skype4Py.cmsSent:
+				
+				state = {
+					'type':		'message-skype',
+					'chat':		msg.ChatName,
+					'message':	msg.Body,
+					'sender':	msg.Sender.Handle + ' ( ' + msg.Sender.FullName + ' )'
+				}
+				
+				# make a string with the request type in it:
+				method = "POST"
+				# create a handler. you can specify different handlers here (file uploads etc)
+				# but we go for the default
+				handler = urllib2.HTTPHandler()
+				# create an openerdirector instance
+				opener = urllib2.build_opener(handler)
+				# build a request
+				request = urllib2.Request('http://localhost:9137/task/state', data=simplejson.dumps(state))
+				# add any other information you want
+				request.add_header("Content-Type",'application/json')
+				# overload the get method function with a small anonymous function...
+				request.get_method = lambda: method
+				# try it; don't forget to catch the result
+				try:
+					connection = opener.open(request)
+				except urllib2.HTTPError,e:
+					connection = e
+				
+				# check. Substitute with appropriate HTTP code.
+				if connection.code == 200 or connection.code == 201:
+					data = connection.read()
+				else:
+					# handle the error case. connection.read() will still contain data
+					# if any was returned, but it probably won't be of any use
+					print "ERROR!"
+					return
+				
+			else:
+				print "WTF?"
+		except Exception as e:
+			print "Error:", e
+
+	
+lastinterrupt = time() - 15
+
+if __name__ == "__main__":
+	while True:
+		try:
+			bot = TimezLogSkype()
+			
+			""" Save our current User ID to compare against the process tree """
+			
+			lastchecked = time()
+			
+			try:
+				while(True):
+					#if (time() - lastchecked > 60):
+					#	for key in SeenUsers.keys():
+					#		if (time() - SeenUser[key]['Lastmessage']) > (5*60):
+					#			while oldmsg = SeenUsers[user.Handle]['messages'].pop():
+					#				oldmsg.MarkAsSeen()
+					start = time()
+					
+					end = time()
+					duration = end - start
+					
+					
+					if duration < 15:
+						sleep(15 - duration)
+				
+			except KeyboardInterrupt:
+				if (time() - lastinterrupt) < 5:
+					sys.exit(1)
+				
+				lastinterrupt = time()
+		
+		except KeyboardInterrupt:
+			print "Keyboard Interrupt while waiting... dying"
+			sys.exit(0)
+		except Exception as e:
+			print "Timeout?", e

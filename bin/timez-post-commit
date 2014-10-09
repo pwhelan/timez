@@ -1,0 +1,14 @@
+#!/bin/bash
+
+AUTHOR=`git log -1 HEAD --pretty=format:"%an"`
+MESSAGE=`git log -1 HEAD --pretty=format:"%s%n%b"`
+BRANCH=`git branch | grep '*' | sed s/'\*\s'//g`
+COMMIT=`git log -1 HEAD --pretty=format:"%H"`
+
+
+http --ignore-stdin POST 127.0.0.1:9137/task/state \
+	type=git-log \
+	message="$MESSAGE" \
+	author="$AUTHOR" \
+	branch="$BRANCH" \
+	commit="$COMMIT" > /dev/null 2> /dev/null
