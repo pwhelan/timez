@@ -2,4 +2,4 @@
 
 eval `cat $HOME/.config/timez/timezrc`
 
-echo '{"text": "'$@'"}' | http POST http://$SERVER:9137/task/note/
+echo '{"text": "'$@'"}' | http POST http://$SERVER:9137/task/note
