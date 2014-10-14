@@ -2,20 +2,17 @@
 	"repositories": [
 		{
 			"type": "vcs",
-			"url": "https://github.com/pwhelan/Slim.git"
+			"url": "https://github.com/jonjomckay/espresso.git"
 		}
 	],
 	"require": {
-		"silex/silex": "1.2.*@stable",
 		"nesbot/carbon": "1.8.0",
 		"guzzle/guzzle": "v3.8.1",
 		"zeuxisoo/slim-whoops": "dev-master",
 		"pear/system_daemon": "dev-master",
-		"lavender/lavender": "v0.14.0"
+		"lavender/lavender": "v0.14.0",
+		"react/espresso": "dev-master",
+		"react/promise": "~2.0"
 	},
-	"autoload": {
-		"psr-0": {
-			"Slim": "server/lib"
-		}
-	}
+	"minimum-stability": "dev"
 }

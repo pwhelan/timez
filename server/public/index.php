@@ -3,6 +3,7 @@
 require_once __DIR__.'/../../vendor/autoload.php';
 
 use Silex\Application as App;
+use React\Espresso\Stack;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Carbon\Carbon;
@@ -10,7 +11,25 @@ use Carbon\Carbon;
 date_default_timezone_set('GMT');
 
 
-$app = new App();
+if (php_sapi_name() == 'cli' && basename($_SERVER['SCRIPT_NAME']) == 'index.php')
+{
+	$IsReact = true;
+}
+else
+{
+	$IsReact = false;
+}
+
+
+if ($IsReact)
+{
+	$app = new React\Espresso\Application();
+}
+else
+{
+	$app = new App();
+}
+
 $app['debug'] = true;
 
 
@@ -41,9 +60,9 @@ class JsonApiView
 $task = $app['controllers_factory'];
 
 $task->before(function() use ($app) {
-	$app['view'] = $app->share(function() { 
+	$app['view'] = function() { 
 		return new \JsonApiView(['pretty_print' => true]); 
-	});
+	};
 });
 
 
@@ -76,7 +95,113 @@ $task->post('/stop/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
 })->value('offset', 0)->value('id', null);
 
 
-$task->post('/state/{id}', function(App $app, Request $request, $id) {
+$task->post('/note/{id}', function(App $app, Request $request, $id) use ($IsReact) {
+	
+	if ($IsReact)
+	{
+		$content = "";
+		
+		
+		$req = $request->attributes->get('react.espresso.request');
+		$req->on('data', function($data) use (&$content) {
+			$content .= $data;
+		});
+		
+		$req->on('end', function() use (&$content, $request, $app, $id) {
+			
+			$note = json_decode($content);
+			$note->date = new MongoDate();
+			
+			$task = $app['tasks']->update(
+				$id == null ?
+					['active' => true] : 
+					['_id' => new MongoId($id), 'active' => true],
+				['$push' => ['notes' => $note]]
+			);
+			
+			return $app['view']->render(201, []);
+		});
+		
+		return $app['view']->render(201, ['rc' => true]);
+	}
+	
+	$note = json_decode($request->getContent());
+	$note->date = new MongoDate();
+	
+	$task = $app['tasks']->update(
+		$id == null ?
+			['active' => true] : 
+			['_id' => new MongoId($id), 'active' => true],
+		['$push' => ['notes' => $note]]
+	);
+	
+	return $app['view']->render(201, []);
+	
+})->value('id', null);
+
+
+$task->post('/state/{id}', function(App $app, Request $request, $id) use ($IsReact) {
+	
+	if ($IsReact)
+	{
+		$content = "";
+		
+		
+		$req = $request->attributes->get('react.espresso.request');
+		$req->on('data', function($data) use (&$content) {
+			$content .= $data;
+		});
+		
+		$req->on('end', function() use (&$content, $request, $app, $id) {
+			$state = json_decode($content);
+			
+			$shm = shm_attach($app['shared']->id);
+			if (isset($state->idle) && shm_has_var($shm, $app['shared']->worker_pid))
+			{
+				$worker_pid = shm_get_var($shm, $app['shared']->worker_pid);
+				if (shm_has_var($shm, $app['shared']->idletimes))
+				{
+					$idletimes = shm_get_var($shm, $app['shared']->idletimes);
+					
+					
+					if (isset($idletimes[$request->getClientIp()]))
+					{
+						$last_idle = $idletimes[$request->getClientIp()];
+						if ($state->idle <= $last_idle && $state->idle < ($app['timeout']))
+						{
+							$app['periodic']->reset();
+						}
+					}
+					
+					$idletimes[$request->getClientIp()] = $state->idle;
+				}
+				else
+				{
+					$idletimes = [$request->getClientIp() => $state->idle];
+				}
+				
+				shm_put_var($shm, $app['shared']->idletimes, $idletimes);
+			}
+			
+			
+			$rc = $app['tasks']->update(
+				$id == null ?
+					['active' => true] : 
+					['_id' => new MongoId($id), 'active' => true],
+				['$push' => ['states' => $state]]
+			);
+			
+			if (!$rc['updatedExisting'])
+			{
+				return $app['view']->render(404, ["error" => "No running task"]);
+			}
+			
+			return $app['view']->render(201, $rc);
+		});
+		
+		return $app['view']->render(201, ['rc' => true]);
+	}
+	
 	
 	$state = json_decode($request->getContent());
 	$state->date = new MongoDate();
@@ -96,7 +221,7 @@ $task->post('/state/{id}', function(App $app, Request $request, $id) {
 				$last_idle = $idletimes[$request->getClientIp()];
 				if ($state->idle <= $last_idle && $state->idle < ($app['timeout']))
 				{
-					posix_kill($worker_pid, SIGUSR1);
+					$app['periodic']->reset();
 				}
 			}
 			
@@ -153,23 +278,6 @@ $task->post('/{name}', function(App $app, $name) {
 });
 
 
-$task->post('/note/{id}', function(App $app, Request $request, $id) {
-	
-	$note = json_decode($request->getContent());
-	$note->date = new MongoDate();
-	
-	$task = $app['tasks']->update(
-		$id == null ?
-			['active' => true] : 
-			['_id' => new MongoId($id), 'active' => true],
-		['$push' => ['notes' => $note]]
-	);
-	
-	$app->render(201, []);
-	
-})->value('id', null);
-
-
 $task->get('/{id}', function(App $app, $id) {
 	
 	$aggregate = [
@@ -201,7 +309,6 @@ $task->get('/{id}', function(App $app, $id) {
 	
 	
 	$results = $app['tasks']->aggregate($aggregate);
-	
 	if ($results['ok'] != 1)
 	{
 		return $app['view']->render(400, ['error' => 'bad request']);
@@ -238,7 +345,7 @@ $task->get('/{id}', function(App $app, $id) {
 
 
 $app->get('/worker', function(App $app) {
-		
+	
 	if (php_sapi_name() != 'cli')
 	{
 		die("WRONG SAPI=".php_sapi_name()."\n");
@@ -248,16 +355,12 @@ $app->get('/worker', function(App $app) {
 	shm_put_var($shm, $app['shared']->worker_pid, getmypid());
 	
 	
-	pcntl_signal(SIGUSR1, function() use ($app) {
-		pcntl_alarm($app['timeout']);
-	});
-	
-	pcntl_signal(SIGALRM, function() use ($app) {
+	$app['periodic']->run(function() use ($app) {
 		
 		$shm = shm_attach($app['shared']->id);
 		$minidle = $app['timeout'];
 		
-				
+			
 		if (shm_has_var($shm, $app['shared']->idletimes))
 		{
 			$idletimes = shm_get_var($shm, $app['shared']->idletimes);
@@ -280,15 +383,9 @@ $app->get('/worker', function(App $app) {
 				'stop' => new MongoDate(strtotime('-'.abs($minidle).' seconds'))
 			]]
 		);
-		pcntl_alarm($app['timeout']);
 	});
 	
-	pcntl_alarm($app['timeout']);
-	while (1):
-		$info = [];
-		sleep(5);
-	endwhile;
-	
+	return "Running\n";
 });
 
 class LavenderView
@@ -380,6 +477,7 @@ $web->get('/history', function(App $app) {
 	$history = $app['tasks']
 		->find(['active' => false], ['name', 'start', 'end'])
 		->sort(['start' => -1]);
+	
 	return $app['view']->render('history', ['history' => $history]);
 });
 
@@ -388,29 +486,113 @@ $app->mount('/task', $task);
 $app->mount('/web', $web);
 
 
-$app['mongo'] = $app->share(function($c) {
+$app['mongo'] = function($c) {
 	return new MongoClient;
-});
+};
 
-$app['mongo:timez'] = $app->share(function($c) {
+$app['mongo:timez'] = function($c) {
 	return $c['mongo']->timez;
-});
+};
 
-$app['tasks'] = $app->share(function ($c) {
+$app['tasks'] = function ($c) {
 	return $c['mongo:timez']->tasks;
-});
+};
 
-$app['shared'] = $app->share(function($c) {
+$app['shared'] = function($c) {
 	return (object)[
 		'id'		=> 0xf00f0000,
 		'worker_pid'	=> 0xf00f0001,
 		'idletimes'	=> 0xf00f0002
 	];
-});
+};
 
-$app['timeout'] = $app->share(function($c) {
+$app['timeout'] = function($c) {
 	return 5 * 60;
-});
+};
 
 
-$app->run();
+class PeriodicReact
+{
+	protected $stack;
+	protected $app;
+	protected $timer = null;
+	protected $callback;
+	
+	
+	public function __construct(Stack $stack)
+	{
+		$this->stack = $stack;
+		$this->app = $stack['app'];
+	}
+	
+	public function reset()
+	{
+		if ($this->timer)
+		{
+			$this->timer->cancel();
+		}
+		
+		$this->timer = $this->stack['loop']->addTimer(
+			$this->app['timeout'], 
+			$this->callback
+		);
+	}
+	
+	public function run(Callable $callback)
+	{
+		$this->callback = $callback;
+		$this->reset();
+	}
+}
+
+class PeriodicAlarm
+{
+	protected $app;
+	
+	
+	public function __construct(App $app)
+	{
+		$this->app = $app;
+	}
+	
+	public function reset()
+	{
+		$shm = shm_attach($this->app['shared']->id);
+		if (shm_has_var($shm, $this->app['shared']->worker_pid))
+		{
+			$worker_pid = shm_get_var($shm, $this->app['shared']->worker_pid);
+			posix_kill($worker_pid, SIGUSR1);
+		}
+	}
+	
+	public function run(Callable $callback)
+	{
+		pcntl_signal(SIGUSR1, function() {
+			pcntl_alarm($this->app['timeout']);
+		});
+		
+		pcntl_signal(SIGALRM, function() use ($callback) {
+			$callback();
+			pcntl_alarm($this->app['timeout']);
+		});
+		
+		pcntl_alarm($this->app['timeout']);
+		while (1):
+			sleep(5);
+		endwhile;
+	}
+}
+
+
+if ($IsReact)
+{
+	$stack = new Stack($app);
+	$app['periodic'] = new PeriodicReact($stack);
+	$app->run(Request::create('/worker'));
+	$stack->listen(9137);
+}
+else
+{
+	$app['periodic'] = new PeriodicAlarm($app);
+	$app->run();
+}
