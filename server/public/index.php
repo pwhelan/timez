@@ -388,8 +388,25 @@ $app->get('/worker', function(App $app) {
 	return "Running\n";
 });
 
-class LavenderView
+
+class MtHamlView
 {
+	/** @var $env
+	 * MtHaml Environment context.
+	 */
+	protected $env;
+	
+	/** @var $executor
+	 * MtHaml PHP Executor.
+	 */
+	protected $executor;
+	
+	/** @var $templateDirectory
+	 * Base directory for templates.
+	 */
+	protected $templateDirectory;
+	
+	
 	/**
 	 * Constructor
 	 * @param  string $templateDirectory Path to template directory
@@ -398,12 +415,13 @@ class LavenderView
 	 */
 	public function __construct($templateDirectory, array $items = array())
 	{
-		require_once __DIR__.'/../../vendor/lavender/lavender/src/Lavender/lavender.php';
-		Lavender::config([
-			'view_dir'	=> $templateDirectory,
-			'file_extension'=> 'jade',
-			'handle_errors'	=> false
+		$this->env = new MtHaml\Environment('php');
+		$this->executor = new MtHaml\Support\Php\Executor($this->env, [
+			'cache'			=> sys_get_temp_dir().'/haml',
+			'enable_escaper'	=> true,
+			'escape_attrs'		=> false
 		]);
+		$this->templateDirectory = $templateDirectory;
 	}
 	
 	/**
@@ -415,7 +433,9 @@ class LavenderView
 	 */	
 	public function render($template, array $data = null)
 	{
-		return \Lavender::view($template)->compile($data);
+		// Compiles and executes the HAML template, with variables given as second
+		// argument
+		return $this->executor->render($this->templateDirectory .'/'. $template .'.haml', $data);
 	}
 }
 
@@ -460,7 +480,8 @@ $web->before(function() use ($app) {
 	
 	$app['view'] = new Layout(
 		__DIR__.'/../app/views/',
-		new LavenderView(__DIR__.'/../app/views/'),
+		//new LavenderView(__DIR__.'/../app/views/'),
+		new MtHamlView(__DIR__.'/../app/views/'),
 		'layout'
 	);
 	
