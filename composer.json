@@ -10,7 +10,6 @@
 		"guzzle/guzzle": "v3.8.1",
 		"zeuxisoo/slim-whoops": "dev-master",
 		"pear/system_daemon": "dev-master",
-		"lavender/lavender": "v0.14.0",
 		"mthaml/mthaml": "1.6.*",
 		"react/espresso": "dev-master",
 		"react/promise": "~2.0"
