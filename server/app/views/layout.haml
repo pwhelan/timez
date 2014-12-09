@@ -1,32 +1,66 @@
 %html
   %head
-    %script{:src => "/js/lib/jquery/dist/jquery.js"}
-    %script{:src => "/js/lib/canjs/can.jquery.js"}
     %link{:rel => "stylesheet", :type => "text/css", :href => "/js/lib/bootstrap/dist/css/bootstrap.min.css"}
     %link{:rel => "stylesheet", :type => "text/css", :href => "/js/lib/bootstrap/dist/css/bootstrap-theme.min.css"}
-    %script{:src => "/js/lib/bootstrap/dist/js/bootstrap.min.js"}
+    %link{:rel => "stylesheet", :type => "text/css", :href => "/js/lib/bootstrap-timepicker/css/bootstrap-timepicker.min.css"}
   %body
-    %nav.navbar.navbar-default{:role => "navigation"}
-      .container-fuild
-        / Brand and toggle get grouped for better mobile display
-        .navbar-header
-          %a.navbar-brand{:href => '#'} Brand
-      
-      / Collect the nav links, forms, and other content for toggling
-      #bs-example-navbar-collapse-1.collapse.navbar-collapse
-        %ul.navbar.navbar-end
-          %li.active
-            %a{:href => "#"} Link
+    .container
+      .row.clearfix
+        .col-md-12.column
+          %nav.navbar.navbar-default{:role => "navigation"}
+            .navbar-header
+              %button.navbar-toggle{"data-target" => "#bs-example-navbar-collapse-1", "data-toggle" => "collapse", :type => "button"}
+                %span.sr-only Toggle navigation
+                %span.icon-bar
+                %span.icon-bar
+                %span.icon-bar
+              %a.navbar-brand{:href => "#"} Timez
+            #bs-example-navbar-collapse-1.collapse.navbar-collapse
+              %ul.nav.navbar-nav
+                %li.active
+                  %a{:href => "#"} History
+                %li
+                  %a{:href => "#"} Poop
+                %li.dropdown
+                  %a.dropdown-toggle{"data-toggle" => "dropdown", :href => "#"}
+                    Dropdown
+                    %strong.caret
+                  %ul.dropdown-menu
+                    %li
+                      %a{:href => "#"} Action
+                    %li
+                      %a{:href => "#"} Another action
+                    %li
+                      %a{:href => "#"} Something else here
+                    %li.divider
+                    %li
+                      %a{:href => "#"} Separated link
+                    %li.divider
+                    %li
+                      %a{:href => "#"} One more separated link
+              %form.navbar-form.navbar-left{:role => "search"}
+                .form-group
+                  %input.form-control{:type => "text"}/
+                %span.input-append.bootstrap-timepicker
+                  %input#timepicker1.input-small
+                  %span.add-on
+                    %i.icon-time
+                %button.btn.btn-default{:type => "submit"} Search
                 
-        %form.navbar-form.navbar-left{:role => "search"}
-          .form-group
-            %input.form-control{:type => "text", :placeholder => "Search"}
-          %button.btn.btn-default{:type => "submit"}
-            Submit
-        
-        %ul.nav.navbar-nav.navbar-right
-          %li
-            %a{:href => "#"} Link
+    .jumbotron
+      %h1
+        Hello, world!
+      %p
+        This is a template for a simple marketing or informational website. It includes a large callout called the hero unit and three supporting pieces of content. Use it as a starting point to create something more unique.
+      %p
+        %a.btn.btn-primary.btn-large{:href => "#"} Learn more
+    
     != $yield
+    %script{:src => "/js/lib/jquery/dist/jquery.js"}
+    %script{:src => "/js/lib/canjs/can.jquery.js"}
+    %script{:src => "/js/lib/bootstrap/dist/js/bootstrap.min.js"}
+    %script{:src => "/js/lib/bootstrap-timepicker/js/bootstrap-timepicker.min.js"}
+    :javascript
+      $('#').timepicker();
   %footer
     (c) Phillip Whelan 2014
