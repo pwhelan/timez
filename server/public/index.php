@@ -6,6 +6,7 @@ use Silex\Application as App;
 use React\Espresso\Stack;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Carbon\Carbon;
 
 date_default_timezone_set('GMT');
@@ -505,6 +506,19 @@ $web->get('/history', function(App $app) {
 
 $app->mount('/task', $task);
 $app->mount('/web', $web);
+
+
+$app->match('/{path}', function(Request $request, $path) {
+	
+	$filepath = realpath(__DIR__.'/'.$request->getPathInfo());
+	if (substr($filepath, 0, strlen(__DIR__)) == __DIR__)
+	{
+		return new Response(file_get_contents($filepath), 200);
+	}
+	
+	throw new NotFoundHttpException();
+	
+})->assert('path', '.+');
 
 
 $app['mongo'] = function($c) {
