@@ -627,7 +627,7 @@ if ($IsReact)
 	$stack = new Stack($app);
 	$app['periodic'] = new PeriodicReact($stack);
 	$app->run(Request::create('/worker'));
-	$stack->listen(9137);
+	$stack->listen(9137, "0.0.0.0");
 }
 else
 {
