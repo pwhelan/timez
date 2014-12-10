@@ -489,10 +489,10 @@ $web->before(function() use ($app) {
 });
 
 
-$web->get('/', function (App $app) {
+$web->get('/{taskid}', function (App $app) {
 	$active = $app['tasks']->findOne(['active' => true]);
 	return $app['view']->render('index', ['active' => $active]);
-});
+})->value('taskid', null);
 
 
 $web->get('/history', function(App $app) {
@@ -507,6 +507,9 @@ $web->get('/history', function(App $app) {
 $app->mount('/task', $task);
 $app->mount('/web', $web);
 
+// https://github.com/silexphp/Silex/issues/149#issuecomment-1817904
+$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/');
+//$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/') . '/';
 
 $app->match('/{path}', function(Request $request, $path) {
 	
