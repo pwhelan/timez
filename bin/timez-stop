@@ -3,7 +3,7 @@
 eval `cat $HOME/.config/timez/timezrc`
 
 if [ -z "$1" ]; then
-	http POST http://$SERVER:9137/task/stop
+	http DELETE http://$SERVER:9137/tasks/current
 else
-	http POST http://$SERVER:9137/task/stop/$1
+	http DELETE http://$SERVER:9137/tasks/$1
 fi

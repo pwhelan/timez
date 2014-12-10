@@ -19,7 +19,7 @@ foreach (explode("\n", $CONFIG_LINES) as $CONFIG_LINE) {
 $http = new Client("http://{$CONFIG['SERVER']}:9137");
 
 try {
-	$task = $http->get('/task')->send()->json();
+	$task = $http->get('/tasks/current')->send()->json();
 }
 catch(Guzzle\Http\Exception\ClientErrorResponseException $httpError)
 {	

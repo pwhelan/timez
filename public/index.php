@@ -24,7 +24,8 @@ else
 
 if ($IsReact)
 {
-	$app = new React\Espresso\Application();
+	require __DIR__.'/../app/Application.php';
+	$app = new Timez\Application();
 }
 else
 {
@@ -61,13 +62,15 @@ class JsonApiView
 $task = $app['controllers_factory'];
 
 $task->before(function() use ($app) {
+	
 	$app['view'] = function() { 
 		return new \JsonApiView(['pretty_print' => true]); 
 	};
+	
 });
 
 
-$task->post('/stop/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
+$task->delete('/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
 	
 	if (ctype_digit($id) && $offset == 0) {
 		$offset = $id;
@@ -75,15 +78,15 @@ $task->post('/stop/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
 	}
 	
 	$rc = $app['tasks']->update(
-		$id ? 
+		$id == 'current' ? 
+			['active' => true] :
 			(ctype_xdigit($id) && $id ?
 				['_id' => new MongoId($id), 'active' => true] :
 				(ctype_digit($id) ? 
 					['name' => $id, 'active' => true] :
 					['active' => true]
 				)
-			) :
-			['active' => true],
+			),
 		['$set' => [
 			'active' => false, 
 			'stop' => new MongoDate(strtotime('-'.abs($offset).' seconds'))
@@ -93,116 +96,27 @@ $task->post('/stop/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
 	
 	return $app['view']->render(200, ['rc' => $rc]);
 	
-})->value('offset', 0)->value('id', null);
+})->value('offset', 0)->value('id', 'current');
 
 
-$task->post('/note/{id}', function(App $app, Request $request, $id) use ($IsReact) {
-	
-	if ($IsReact)
-	{
-		$content = "";
-		
-		
-		$req = $request->attributes->get('react.espresso.request');
-		$req->on('data', function($data) use (&$content) {
-			$content .= $data;
-		});
-		
-		$req->on('end', function() use (&$content, $request, $app, $id) {
-			
-			$note = json_decode($content);
-			$note->date = new MongoDate();
-			
-			$task = $app['tasks']->update(
-				$id == null ?
-					['active' => true] : 
-					['_id' => new MongoId($id), 'active' => true],
-				['$push' => ['notes' => $note]]
-			);
-			
-			return $app['view']->render(201, []);
-		});
-		
-		return $app['view']->render(201, ['rc' => true]);
-	}
+$task->post('/{id}/note', function(App $app, Request $request, $id) {
 	
 	$note = json_decode($request->getContent());
 	$note->date = new MongoDate();
 	
 	$task = $app['tasks']->update(
-		$id == null ?
+		$id == 'current' ?
 			['active' => true] : 
 			['_id' => new MongoId($id), 'active' => true],
 		['$push' => ['notes' => $note]]
 	);
 	
-	return $app['view']->render(201, []);
+	return $app['view']->render(201, ['rc' => true]);
 	
-})->value('id', null);
+})->value('id', 'current');
 
 
-$task->post('/state/{id}', function(App $app, Request $request, $id) use ($IsReact) {
-	
-	if ($IsReact)
-	{
-		$content = "";
-		
-		
-		$req = $request->attributes->get('react.espresso.request');
-		$req->on('data', function($data) use (&$content) {
-			$content .= $data;
-		});
-		
-		$req->on('end', function() use (&$content, $request, $app, $id) {
-			$state = json_decode($content);
-			
-			$shm = shm_attach($app['shared']->id);
-			if (isset($state->idle) && shm_has_var($shm, $app['shared']->worker_pid))
-			{
-				$worker_pid = shm_get_var($shm, $app['shared']->worker_pid);
-				if (shm_has_var($shm, $app['shared']->idletimes))
-				{
-					$idletimes = shm_get_var($shm, $app['shared']->idletimes);
-					
-					
-					if (isset($idletimes[$request->getClientIp()]))
-					{
-						$last_idle = $idletimes[$request->getClientIp()];
-						if ($state->idle <= $last_idle && $state->idle < ($app['timeout']))
-						{
-							$app['periodic']->reset();
-						}
-					}
-					
-					$idletimes[$request->getClientIp()] = $state->idle;
-				}
-				else
-				{
-					$idletimes = [$request->getClientIp() => $state->idle];
-				}
-				
-				shm_put_var($shm, $app['shared']->idletimes, $idletimes);
-			}
-			
-			
-			$rc = $app['tasks']->update(
-				$id == null ?
-					['active' => true] : 
-					['_id' => new MongoId($id), 'active' => true],
-				['$push' => ['states' => $state]]
-			);
-			
-			if (!$rc['updatedExisting'])
-			{
-				return $app['view']->render(404, ["error" => "No running task"]);
-			}
-			
-			return $app['view']->render(201, $rc);
-		});
-		
-		return $app['view']->render(201, ['rc' => true]);
-	}
-	
+$task->post('/{id}/state', function(App $app, Request $request, $id) {
 	
 	$state = json_decode($request->getContent());
 	$state->date = new MongoDate();
@@ -238,7 +152,7 @@ $task->post('/state/{id}', function(App $app, Request $request, $id) use ($IsRea
 	
 	
 	$rc = $app['tasks']->update(
-		$id == null ?
+		$id == 'current' ?
 			['active' => true] : 
 			['_id' => new MongoId($id), 'active' => true],
 		['$push' => ['states' => $state]]
@@ -251,7 +165,7 @@ $task->post('/state/{id}', function(App $app, Request $request, $id) use ($IsRea
 	
 	return $app['view']->render(201, $rc);
 	
-})->value('id', null);
+})->value('id', 'current');
 
 
 $task->post('/{name}', function(App $app, $name) {
@@ -282,9 +196,9 @@ $task->post('/{name}', function(App $app, $name) {
 $task->get('/{id}', function(App $app, $id) {
 	
 	$aggregate = [
-		['$match'	=> $id ?
-			['_id' => new MongoId($id)] :
-			['active' => true]
+		['$match'	=> $id == 'current' ?
+			['active' => true] :
+			['_id' => new MongoId($id)]
 		],
 		['$project' => [
 			'name'	=> 1,
@@ -318,7 +232,7 @@ $task->get('/{id}', function(App $app, $id) {
 	if (count($results['result']) < 1)
 	{
 		return $app['view']->render(404, [
-			'error' => $id ? 
+			'error' => $id == 'current' ? 
 				'Not Found..' : 
 				'No Active Task'
 		]);
@@ -342,7 +256,7 @@ $task->get('/{id}', function(App $app, $id) {
 	
 	return $app['view']->render(200, $task);
 	
-})->value('id', null);
+})->value('id', 'current');
 
 
 $app->get('/worker', function(App $app) {
@@ -504,12 +418,15 @@ $web->get('/history', function(App $app) {
 });
 
 
-$app->mount('/task', $task);
+$app->mount('/tasks', $task);
 $app->mount('/web', $web);
 
 // https://github.com/silexphp/Silex/issues/149#issuecomment-1817904
-$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/');
-//$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/') . '/';
+if (isset($_SERVER['REQUEST_URI']))
+{
+	$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/');
+	//$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/') . '/';
+}
 
 $app->match('/{path}', function(Request $request, $path) {
 	

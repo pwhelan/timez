@@ -4,4 +4,4 @@ eval `cat $HOME/.config/timez/timezrc`
 
 NAME=`echo $@ | sed s/' '/'%20'/g`
 
-http POST http://$SERVER:9137/task/$NAME
+http POST http://$SERVER:9137/tasks/$NAME

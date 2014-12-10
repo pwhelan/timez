@@ -38,7 +38,7 @@ class TimezLogSkype(object):
 				# create an openerdirector instance
 				opener = urllib2.build_opener(handler)
 				# build a request
-				request = urllib2.Request('http://localhost:9137/task/state', data=simplejson.dumps(state))
+				request = urllib2.Request('http://localhost:9137/tasks/current/state', data=simplejson.dumps(state))
 				# add any other information you want
 				request.add_header("Content-Type",'application/json')
 				# overload the get method function with a small anonymous function...
