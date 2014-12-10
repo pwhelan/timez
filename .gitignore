@@ -16,6 +16,6 @@ DEADJOE
 /server/run/
 
 # Ignore bower installed JS packages
-/server/public/js/lib/
+/public/js/lib/
 
 /backups/
