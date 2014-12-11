@@ -3,6 +3,10 @@
 		{
 			"type": "vcs",
 			"url": "https://github.com/jonjomckay/espresso.git"
+		},
+		{
+			"type": "vcs",
+			"url": "https://github.com/mugabe/multipart"
 		}
 	],
 	"require": {
@@ -12,7 +16,8 @@
 		"pear/system_daemon": "dev-master",
 		"mthaml/mthaml": "1.6.*",
 		"react/espresso": "dev-master",
-		"react/promise": "~2.0"
+		"react/promise": "~2.0",
+		"mugabe/multipart": "dev-master"
 	},
 	"minimum-stability": "dev"
 }
