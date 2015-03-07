@@ -6,8 +6,8 @@ var attr = DS.attr,
 Timez.Task = Model.extend({
 	name: DS.attr('string'),
 	active: DS.attr('boolean'),
-	start: DS.attr('datetime'),
-	stop: DS.attr('datetime')
+	start: DS.attr('date'),
+	stop: DS.attr('date')
 	//_id: DS.attr('string')
 	// states: array ...
 	// id: ..

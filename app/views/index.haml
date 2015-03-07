@@ -1,4 +1,6 @@
 %script{:type=>"text/x-handlebars", :data => ["template-name" => "task"]}
   %ul#task-list
+    {{#each task in model}}
     %li
-      {{model.name}}
+      {{task.name}} - {{task.start}}
+    {{/each}}

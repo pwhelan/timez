@@ -9,8 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Carbon\Carbon;
 
-date_default_timezone_set('GMT');
 
+date_default_timezone_set('GMT');
 
 if (php_sapi_name() == 'cli' && basename($_SERVER['SCRIPT_NAME']) == 'index.php')
 {
@@ -33,6 +33,45 @@ else
 }
 
 $app['debug'] = true;
+
+
+// Used for correct serialization (ordered properties, etc...)
+class Task
+{
+	public $id;
+	public $name;
+	public $start;
+	public $stop;
+	public $active;
+	public $states;
+	
+	public function __construct($task)
+	{
+		$this->id = $task['_id']->{'$id'};
+		$this->name = $task['name'];
+		$this->active = $task['active'];
+		
+		
+		if (isset($task['states']))
+		{
+			$this->states = $task['states'];
+		}
+		
+		$this->start = Carbon::createFromTimestamp(
+				(int)explode(' ', (string)$task['start'])[1]
+			)
+			->format('c');
+		
+		if (isset($task['stop']) && $task['stop'])
+		{
+			$this->stop = Carbon::createFromTimestamp(
+					(int)explode(' ', (string)$task['stop'])[1]
+				)
+				->format('c');
+		}
+		
+	}
+}
 
 
 class JsonApiView
@@ -69,7 +108,6 @@ $task->before(function() use ($app) {
 	
 });
 
-
 $task->delete('/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
 	
 	if (ctype_digit($id) && $offset == 0) {
@@ -96,8 +134,97 @@ $task->delete('/{id}/{offset}', function($id = 0, $offset = 0) use ($app) {
 	
 	return $app['view']->render(200, ['rc' => $rc]);
 	
-})->value('offset', 0)->value('id', 'current');
+})->value('offset', 0); //->value('id', 'current');
 
+$task->get('/', function(App $app, Request $req) {
+	
+	$aggregate = [
+		['$project' => [
+			'name'	=> 1,
+			'start'	=> 1,
+			'stop'	=> ['$ifNull' => ['$stop', null]],
+			'active'=> 1,
+			'states'=> ['$ifNull' => ['$states', [ null ]
+			]]
+		]],
+		['$unwind' => '$states'],
+		['$group' => [
+			'_id'	=> '$_id',
+			'name'	=> ['$addToSet' => '$name'],
+			'start'	=> ['$addToSet' => '$start'],
+			'stop'	=> ['$addToSet' => '$stop'],
+			'active'=> ['$addToSet' => '$active'],
+			'states'=> ['$sum' => 1]
+		]],
+		['$unwind' => '$start'],
+		['$unwind' => '$name'],
+		['$unwind' => '$stop'],
+		['$unwind' => '$active']
+	];
+	
+	
+	$query = [];
+	
+	if (($sort = $req->get('sort')))
+	{
+		$query[] = ['$sort' => array_map(
+			function($sort) {
+				return (int)$sort;
+			},
+			$sort
+		)];
+	}
+	else
+	{
+		$query[] = ['$sort' => ['start' => -1]];
+	}
+	
+	if (!($page = $req->get('page')))
+	{
+		$page = 0;
+	}
+	
+	if (!($limit = $req->get('limit')))
+	{
+		$limit = 10;
+	}
+	else if ($limit > 100)
+	{
+		$limit = 100;
+	}
+	
+	$query[] = ['$skip' => $page * $limit];
+	$query[] = ['$limit' => $limit];
+	
+	
+	$results = $app['tasks']->aggregate(
+		array_merge(
+			$query,
+			$aggregate,
+			$query
+		)
+	);
+	
+	if ($results['ok'] != 1)
+	{
+		return $app['view']->render(404, ['error' => 'not found']);
+	}
+	
+	if (count($results['result']) < 1)
+	{
+		return $app['view']->render(204, ['error' => 'No Records']);
+	}
+	
+	
+	$tasks = array_map(
+		function($task) {
+			return new Task($task);
+		},
+		$results['result']
+	);
+	
+	return $app['view']->render(200, ['tasks' => $tasks]);
+});
 
 $task->post('/{id}/note', function(App $app, Request $request, $id) {
 	
@@ -111,7 +238,7 @@ $task->post('/{id}/note', function(App $app, Request $request, $id) {
 		['$push' => ['notes' => $note]]
 	);
 	
-	return $app['view']->render(201, ['rc' => true]);
+	return $app['view']->render(201, ['status' => true]);
 	
 })->value('id', 'current');
 
@@ -163,10 +290,9 @@ $task->post('/{id}/state', function(App $app, Request $request, $id) {
 		return $app['view']->render(404, ["error" => "No running task"]);
 	}
 	
-	return $app['view']->render(201, $rc);
+	return $app['view']->render(201, ['status' => $rc['ok'] == 1 ? true : false]);
 	
 })->value('id', 'current');
-
 
 $task->post('/{name}', function(App $app, $name) {
 	
@@ -185,13 +311,8 @@ $task->post('/{name}', function(App $app, $name) {
 	];
 	
 	$app['tasks']->insert($task);
-	$task['start'] = Carbon::createFromTimestamp(
-		(int)explode(' ', (string)$task['start'])[1]
-	)->format('c');
-	
-	return $app['view']->render(201, $task);
+	return $app['view']->render(201, new Task($task));
 });
-
 
 $task->get('/{id}', function(App $app, $id) {
 	
@@ -240,25 +361,11 @@ $task->get('/{id}', function(App $app, $id) {
 	}
 	
 	
-	$task = $results['result'][0];
+	$task = new Task($results['result'][0]);
 	
-	$task['start'] = Carbon::createFromTimestamp(
-			(int)explode(' ', (string)$task['start'])[1]
-		)
-		->format('c');
+	return $app['view']->render(200, ['task' => $task]);
 	
-	if (isset($task['stop']) && $task['stop'])
-	{
-		$task['stop'] = Carbon::createFromTimestamp(
-				(int)explode(' ', (string)$task['stop'])[1]
-			)
-			->format('c');
-	}
-	
-	return $app['view']->render(200, $task);
-	
-})->value('id', 'current');
-
+});
 
 $app->get('/worker', function(App $app) {
 	
@@ -425,13 +532,13 @@ $app->mount('/web', $web);
 // https://github.com/silexphp/Silex/issues/149#issuecomment-1817904
 if (isset($_SERVER['REQUEST_URI']))
 {
-	$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/');
+	//$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/');
 	//$_SERVER['REQUEST_URI'] = rtrim($_SERVER['REQUEST_URI'], '/') . '/';
 }
 
-$app->match('/{path}', function(Request $request, $path) {
+$app->match('/js/{path}', function(Request $request, $path) {
 	
-	$filepath = realpath(__DIR__.'/'.$request->getPathInfo());
+	$filepath = realpath(__DIR__.'/js/'.$request->getPathInfo());
 	if (substr($filepath, 0, strlen(__DIR__)) == __DIR__)
 	{
 		return new Response(file_get_contents($filepath), 200);
@@ -440,7 +547,6 @@ $app->match('/{path}', function(Request $request, $path) {
 	throw new NotFoundHttpException();
 	
 })->assert('path', '.+');
-
 
 $app['mongo'] = function($c) {
 	return new MongoClient;
