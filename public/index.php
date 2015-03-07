@@ -205,7 +205,8 @@ $task->get('/{id}', function(App $app, $id) {
 			'start'	=> 1,
 			'stop'	=> ['$ifNull' => ['$stop', null]],
 			'active'=> 1,
-			'states'=> 1
+			'states'=> ['$ifNull' => ['$states', [ null ]
+			]]
 		]],
 		['$unwind' => '$states'],
 		['$group' => [
