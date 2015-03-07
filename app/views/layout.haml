@@ -46,21 +46,19 @@
                   %span.add-on
                     %i.icon-time
                 %button.btn.btn-default{:type => "submit"} Search
-                
-    .jumbotron
-      %h1
-        Hello, world!
-      %p
-        This is a template for a simple marketing or informational website. It includes a large callout called the hero unit and three supporting pieces of content. Use it as a starting point to create something more unique.
-      %p
-        %a.btn.btn-primary.btn-large{:href => "#"} Learn more
     
-    != $yield
+    #content
+      != $yield
+    
     %script{:src => "/js/lib/jquery/dist/jquery.js"}
-    %script{:src => "/js/lib/canjs/can.jquery.js"}
     %script{:src => "/js/lib/bootstrap/dist/js/bootstrap.min.js"}
     %script{:src => "/js/lib/bootstrap-timepicker/js/bootstrap-timepicker.min.js"}
-    :javascript
-      $('#').timepicker();
+    %script{:src => "/js/lib/handlebars/handlebars.js"}
+    %script{:src => "/js/lib/ember/ember.js"}
+    %script{:src => "/js/lib/ember-data/ember-data.js"}
+    %script{:src => "/app/main.js"}
+    %script{:src => "/app/router.js"}
+    %script{:src => "/app/models/task.js"}
+    
   %footer
     (c) Phillip Whelan 2014
