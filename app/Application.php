@@ -86,7 +86,7 @@ class Application extends \React\Espresso\Application
 		return $sfrequest;
 	}
 	
-	protected function parseBody($headers, &$content)
+	protected function parseBody($method, $hdr, &$content)
 	{
 		$post = [];
 		$files = [];
@@ -125,7 +125,7 @@ class Application extends \React\Espresso\Application
 			break;
 			
 		case 'application/x-www-form-urlencoded':
-			case (!in_array($request->getMethod(), ['GET', 'HEAD'])):
+			case (!in_array($method, ['GET', 'HEAD'])):
 			parse_str($content, $post);
 			break;
 			
