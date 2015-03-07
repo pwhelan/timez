@@ -55,8 +55,16 @@ class Application extends \React\Espresso\Application
 	
 	protected function buildSfRequest(Request $request, Response $response, &$content)
 	{
-		list ($post, $files) = $this->parseBody($request->getHeaders(), $content);
+		list ($post, $files) = $this->parseBody(
+			$request->getMethod(),
+			$request->getHeaders(), 
+			$content
+		);
 		
+		if (empty($post))
+		{
+			$post = [];
+		}
 		
 		// Create Request with the full content.
 		$sfrequest = SymfonyRequest::create(
