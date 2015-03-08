@@ -9,6 +9,14 @@
           %span.badge.pull-right {{date-format task.model.start 'YYYY-MM-DD HH:mm'}}
         {{#if task.isExpanded}}
         <div {{action 'tasks' bubbles=false}} class="panel-body">
+        %h3 Notes
+        %ul.list-group
+          {{#each note in task.model.notes}}
+          %li.list-group-item
+            {{note.text}}
+            %span.badge {{date-format note.model.date 'YYYY-MM-DD HH:mm'}}
+          {{/each}}
+        %h3 States
         %ul.list-group
           {{#each state in task.model.states}}
           %li.list-group-item
