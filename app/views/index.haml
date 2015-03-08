@@ -1,6 +1,21 @@
 %script{:type=>"text/x-handlebars", :data => ["template-name" => "task"]}
-  %ul#task-list
-    {{#each task in model}}
-    %li
-      {{task.name}} - {{task.start}}
-    {{/each}}
+  .container
+    #task-list.list-group
+      {{#each task in model itemController="tasks"}}
+      %a.list-group-item.list-group-item-success
+        <div {{action 'toggle'}} class="panel panel-default">
+        .panel-heading
+          {{task.model.name}}
+          %span.badge.pull-right {{date-format task.model.start 'YYYY-MM-DD HH:mm'}}
+        {{#if task.isExpanded}}
+        <div {{action 'tasks' bubbles=false}} class="panel-body">
+        %ul.list-group
+          {{#each state in task.model.states}}
+          %li.list-group-item
+            {{state.name}}
+            %span.badge {{state.model.exec}}
+          {{/each}}
+        </div>
+        {{/if}}
+        </div>
+      {{/each}}

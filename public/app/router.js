@@ -1,5 +1,8 @@
 Timez.Router.map(function() {
-	this.resource('task', { path: '/web' });
+	this.resource('task', { path: '/web' }, function() {
+		this.resource('states');
+		this.resource('notes');
+	});
 });
 
 Timez.Router.reopen({

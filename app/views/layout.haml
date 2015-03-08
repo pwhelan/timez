@@ -41,16 +41,13 @@
               %form.navbar-form.navbar-left{:role => "search"}
                 .form-group
                   %input.form-control{:type => "text"}/
-                %span.input-append.bootstrap-timepicker
-                  %input#timepicker1.input-small
-                  %span.add-on
-                    %i.icon-time
                 %button.btn.btn-default{:type => "submit"} Search
     
     #content
       != $yield
     
     %script{:src => "/js/lib/jquery/dist/jquery.js"}
+    %script{:src => "/js/lib/momentjs/moment.js"}
     %script{:src => "/js/lib/bootstrap/dist/js/bootstrap.min.js"}
     %script{:src => "/js/lib/bootstrap-timepicker/js/bootstrap-timepicker.min.js"}
     %script{:src => "/js/lib/handlebars/handlebars.js"}
@@ -60,6 +57,8 @@
     %script{:src => "/app/main.js"}
     %script{:src => "/app/router.js"}
     %script{:src => "/app/models/task.js"}
+    %script{:src => "/app/models/state.js"}
+    %script{:src => "/app/models/note.js"}
     
   %footer
     (c) Phillip Whelan 2014

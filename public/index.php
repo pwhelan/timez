@@ -35,15 +35,90 @@ else
 $app['debug'] = true;
 
 
+class Note implements JsonSerializable
+{
+	protected $task;
+	protected $idx;
+	
+	public $date;
+	public $text;
+	
+	
+	public function __construct($task, $idx, $note)
+	{
+		$this->task = $task;
+		
+		$this->date = Carbon::createFromTimestamp(
+			(int)explode(' ', (string)$note['date'])[1]
+		);
+		
+		$this->mongodate = $note['date'];
+		$this->text = @$note['text'];
+	}
+	
+	public function jsonSerialize()
+	{
+		return [
+			'id'		=> $this->task->id . '-' . $this->idx,
+			'date'		=> $this->date->format('c'),
+			'text'		=> $this->text,
+			'links'		=> [
+				'task'	=>	'/tasks/' . $this->task->id
+			]
+		];
+	}
+}
+
+class State implements JsonSerializable
+{
+	protected $task;
+	protected $idx;
+	
+	public $pid;
+	public $idle;
+	public $exec;
+	public $name;
+	public $cwd;
+	
+	
+	public function __construct(Task $task, $idx, $state)
+	{
+		$this->task = $task;
+		$this->idx = $idx;
+		
+		$this->exec = @$state['exec'];
+		$this->name = @$state['name'];
+		$this->idle = @$state['idle'];
+		$this->cwd = @$state['cwd'];
+		$this->pid = @$state['pid'];
+	}
+	
+	public function jsonSerialize()
+	{
+		return [
+			'id'		=> $this->task->id . '/' . $this->idx,
+			'exec'		=> $this->exec,
+			'name'		=> $this->name,
+			'idle'		=> $this->idle,
+			'cwd'		=> $this->cwd,
+			'pid'		=> $this->pid,
+			'links'		=> [
+				'task'	=>	'/tasks/' . $this->task->id
+			]
+		];
+	}
+}
+
 // Used for correct serialization (ordered properties, etc...)
-class Task
+class Task implements JsonSerializable
 {
 	public $id;
 	public $name;
 	public $start;
 	public $stop;
 	public $active;
-	public $states;
+	public $statecount;
+	
 	
 	public function __construct($task)
 	{
@@ -54,7 +129,38 @@ class Task
 		
 		if (isset($task['states']))
 		{
-			$this->states = $task['states'];
+			if (is_numeric($task['states']))
+			{
+				$this->statecount = $task['states'];
+			}
+			else
+			{
+				$idx = 0;
+				$this->states = array_map(
+					function($state) use (&$idx) {
+						return new State($this, $idx++, $state);
+					},
+					$task['states']
+				);
+			}
+		}
+		
+		if (isset($task['notes']))
+		{
+			if (is_numeric($task['notes']))
+			{
+				$this->notes = $task['notes'];
+			}
+			else
+			{
+				$idx = 0;
+				$this->notes = array_map(
+					function($note) use (&$idx) {
+						return new Note($this, $idx++, $note);
+					},
+					$task['notes']
+				);
+			}
 		}
 		
 		$this->start = Carbon::createFromTimestamp(
@@ -70,6 +176,22 @@ class Task
 				->format('c');
 		}
 		
+	}
+	
+	public function jsonSerialize()
+	{
+		return [
+			'id'		=> $this->id,
+			'name'		=> $this->name,
+			'start'		=> $this->start,
+			'stop'		=> $this->stop,
+			'active'	=> $this->active,
+			'statecount'	=> $this->statecount,
+			'links'		=> [
+				'notes'	=>	'/tasks/' . $this->id . '/notes',
+				'states'=>	'/tasks/' . $this->id . '/states'
+			]
+		];
 	}
 }
 
@@ -291,6 +413,54 @@ $task->post('/{id}/state', function(App $app, Request $request, $id) {
 	}
 	
 	return $app['view']->render(201, ['status' => $rc['ok'] == 1 ? true : false]);
+	
+})->value('id', 'current');
+
+$task->get('/{id}/states', function(App $app, Request $request, $id) {
+	
+	$task = $app['tasks']->findOne(
+		$id == 'current' ?
+			['active' => true] : 
+			['_id' => new MongoId($id)],
+		['name' => 1, 'start' => 1, 'active' => 1, 'states' => 1]
+	);
+	
+	if (!$task)
+	{
+		return $app['view']->render(404);
+	}
+	
+	$task = new Task($task);
+	if (!isset($task->states))
+	{
+		return $app['view']->render(204);
+	}
+	
+	return $app['view']->render(200, ['states' => array_slice($task->states, 0, 10)]);
+	
+})->value('id', 'current');
+
+$task->get('/{id}/notes', function(App $app, Request $request, $id) {
+	
+	$task = $app['tasks']->findOne(
+		$id == 'current' ?
+			['active' => true] : 
+			['_id' => new MongoId($id)],
+		['name' => 1, 'start' => 1, 'active' => 1,  'notes' => 1]
+	);
+	
+	if (!$task)
+	{
+		return $app['view']->render(404);
+	}
+	
+	$task = new Task($task);
+	if (!isset($task->notes))
+	{
+		return $app['view']->render(204);
+	}
+	
+	return $app['view']->render(200, ['notes' => array_slice($task->notes, 0, 10)]);
 	
 })->value('id', 'current');
 
