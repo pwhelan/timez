@@ -12,7 +12,7 @@ Timez.Router.reopen({
 Timez.TaskRoute = Ember.Route.extend({
 	
 	model: function() {
-		return this.store.find('task', 0);
+		return this.store.find('task');
 	}
 	
 });
