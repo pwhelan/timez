@@ -19,3 +19,11 @@ DEADJOE
 /public/js/lib/
 
 /backups/
+
+# Ignore scratch area
+/schema/
+
+# Ignore project files
+.idea
+*.sublime-project
+*.sublime-workspace
